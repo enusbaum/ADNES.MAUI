@@ -1,4 +1,4 @@
-﻿using ADNES.MAUI.Helpers;
+﻿using ADNES.MAUI.ViewModels;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
@@ -23,7 +23,6 @@ namespace ADNES.MAUI
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
-            builder.Services.AddSingleton<SkiaHelpers>();
 
             return builder.Build();
         }

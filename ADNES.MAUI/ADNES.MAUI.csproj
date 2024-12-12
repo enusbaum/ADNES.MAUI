@@ -81,7 +81,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Renderer\" />
 	  <Folder Include="Resources\Images\" />
 	</ItemGroup>
 

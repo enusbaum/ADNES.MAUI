@@ -1,24 +1,19 @@
-using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 using System.Runtime.CompilerServices;
+using ADNES.MAUI.Helpers;
 
 namespace ADNES.MAUI.Pages
 {
     public partial class EmulatorPage : ContentPage, IRecipient<EmulatorPageViewModel>
     {
-        private readonly SkiaHelpers _skiaHelpers;
-        private SKBitmap _controllerBitmap;
-        private SKBitmap _consoleBitmap;
-        private SKBitmap _emulatorBitmap;
 
-        public EmulatorPage(SkiaHelpers skiaHelpers)
+        public EmulatorPage()
         {
             InitializeComponent();
-            _skiaHelpers = skiaHelpers;
         }
 
         /// <summary>
@@ -27,11 +22,6 @@ namespace ADNES.MAUI.Pages
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-
-            //Load initial images into SKBitmaps
-            _controllerBitmap = await _skiaHelpers.GetSKBitmapFromResource("nes_controller.png");
-            _consoleBitmap = await _skiaHelpers.GetSKBitmapFromResource("nes_console.png");
-            _emulatorBitmap = await _skiaHelpers.GetSKBitmapFromResource("nes_static.png");
 
             //Subscribe to events to draw the bitmaps on the canvas from the ViewModel
             WeakReferenceMessenger.Default.Register(this);
@@ -53,23 +43,16 @@ namespace ADNES.MAUI.Pages
         private void OnCanvasSizeChanged(object sender, EventArgs e)
         {
             var canvasReference = (SKCanvasView)sender;
+            var viewModel = (EmulatorPageViewModel)BindingContext;
 
-            //Don't invoke if the view hasn't loaded yet
-            if (canvasReference.Width <= 0) return;
+            var imageArea = GetImageAreaByStyleId(canvasReference.StyleId);
 
-            var bitmapToLoad = canvasReference.StyleId switch //Determine which Canvas is raising the event and load the associated bitmap
-            {
-                "ConsoleCanvas" => _consoleBitmap,
-                "EmulatorCanvas" => _emulatorBitmap,
-                "ControllerCanvas" => _controllerBitmap,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            var aspectRatio = (float)bitmapToLoad.Height / bitmapToLoad.Width;
+            var aspectRatio = (float)imageArea.Image.Height / imageArea.Image.Width;
             var desiredHeight = (float)canvasReference.Width * aspectRatio;
-
             canvasReference.HeightRequest = desiredHeight;
-;
+
+            imageArea.CalculateAreas(new SKSize((float)canvasReference.Width, desiredHeight));
+
             canvasReference.InvalidateSurface();
         }
 
@@ -82,13 +65,12 @@ namespace ADNES.MAUI.Pages
         private void OnCanvasPaint(object sender, SKPaintSurfaceEventArgs e)
         {
             var canvasReference = (SKCanvasView)sender;
-            var bitmapToLoad = canvasReference.StyleId switch //Determine which Canvas is raising the event and load the associated bitmap
-            {
-                "ConsoleCanvas" => _consoleBitmap,
-                "ControllerCanvas" => _controllerBitmap,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            DrawBitmapOnCanvas(bitmapToLoad, e.Surface.Canvas, e.Info.Height, e.Info.Width);
+            var viewModel = (EmulatorPageViewModel)BindingContext;
+
+            var imageArea = GetImageAreaByStyleId(canvasReference.StyleId);
+
+            DrawBitmapOnCanvas(imageArea.Image, e.Surface.Canvas, e.Info.Height, e.Info.Width);
+
             canvasReference.PaintSurface -= OnCanvasPaint; //Unsubscribe from the event as updates from here on in will come from the ViewModel
         }
 
@@ -101,9 +83,9 @@ namespace ADNES.MAUI.Pages
         {
             var viewModel = (EmulatorPageViewModel)BindingContext;
             DrawBitmapOnCanvas(
-                (viewModel.RenderRunning ? viewModel.EmulatorScreenBitmap : _emulatorBitmap), 
-                e.Surface.Canvas, 
-                e.Info.Height, 
+                (viewModel.RenderRunning ? viewModel.EmulatorScreenBitmap : viewModel.EmulatorImage.Image),
+                e.Surface.Canvas,
+                e.Info.Height,
                 e.Info.Width
                 );
         }
@@ -137,5 +119,20 @@ namespace ADNES.MAUI.Pages
         {
             EmulatorCanvas.InvalidateSurface();
         }
+
+        /// <summary>
+        ///     Gets the ImageArea from the ViewModel based on the StyleId of the canvas
+        /// </summary>
+        /// <param name="styleId"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        private ImageArea GetImageAreaByStyleId(string styleId) =>
+            styleId switch //Determine which Canvas is raising the event and load the associated bitmap
+            {
+                "ConsoleCanvas" => ((EmulatorPageViewModel)BindingContext).ConsoleImage,
+                "EmulatorCanvas" => ((EmulatorPageViewModel)BindingContext).EmulatorImage,
+                "ControllerCanvas" => ((EmulatorPageViewModel)BindingContext).ControllerImage,
+                _ => throw new ArgumentOutOfRangeException()
+            };
     }
 }

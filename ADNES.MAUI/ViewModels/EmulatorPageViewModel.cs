@@ -6,7 +6,7 @@ using SkiaSharp.Views.Maui;
 
 namespace ADNES.MAUI.ViewModels
 {
-    public partial class  EmulatorPageViewModel : ViewModelBase, IDisposable
+    public partial class EmulatorPageViewModel : ViewModelBase, IDisposable
     {
         public readonly SKBitmapRenderer BitmapRenderer;
 
@@ -32,20 +32,24 @@ namespace ADNES.MAUI.ViewModels
         /// </summary>
         private readonly Task _renderTask;
 
+        public ImageArea ControllerImage { get; set; }
+        public ImageArea ConsoleImage { get; set; }
+        public ImageArea EmulatorImage { get; set; }
 
-        /// <summary>
-        ///     Default Constructor
-        /// </summary>
         public EmulatorPageViewModel()
         {
             BitmapRenderer = new SKBitmapRenderer(ADNES.Helpers.ColorHelper.ColorPalette);
             RenderRunning = true;
 
+            ControllerImage = new ImageArea("nes_controller.png");
+            ConsoleImage = new ImageArea("nes_console.png");
+            EmulatorImage = new ImageArea("nes_static.png");
+
             _renderTask = Task.Factory.StartNew(Render);
         }
 
         [RelayCommand]
-        public void ConsoleCanvas_OnTouch(SKTouchEventArgs e)
+        public async Task ConsoleCanvas_OnTouch(SKTouchEventArgs e)
         {
             switch (e.ActionType)
             {
