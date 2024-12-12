@@ -49,7 +49,7 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public Dictionary<int, SKRect> Areas { get; set; } = new();
 
-        public ImageArea(string resourceName, Dictionary<int, SKRect> imageAreas = null)
+        public ImageArea(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
         {
             //Set Image
             Image = Task.Run(async () => await GetSKBitmapFromResourceAsync(resourceName)).GetAwaiter()
@@ -60,12 +60,12 @@ namespace ADNES.MAUI.Helpers
 
             //Set our reference for the original areas, as well as the currently defined areas
             _originalAreas = imageAreas;
-            ResetTouchAreas();
+            ResetAreas();
         }
 
-        private void ResetTouchAreas()
+        private void ResetAreas()
         {
-            if (_originalAreas != null) 
+            if (_originalAreas != null)
                 Areas = new Dictionary<int, SKRect>(_originalAreas);
         }
 
@@ -74,7 +74,13 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
-        public int InArea(SKPoint point) => Areas.FirstOrDefault(x => x.Value.Contains(point)).Key;
+        public int InArea(SKPoint point)
+        {
+            if (!Areas.Any(x => x.Value.Contains(point)))
+                return -1;
+
+            return Areas.FirstOrDefault(x => x.Value.Contains(point)).Key;
+        }
 
         /// <summary>
         ///     Determines if the point is within any of the touch areas and returns the key
@@ -94,8 +100,11 @@ namespace ADNES.MAUI.Helpers
             if (_originalAreas == null)
                 return;
 
+            ResetAreas();
+
             var widthRatio = scaledImageSize.Width / OriginalImageSize.Width;
             var heightRatio = scaledImageSize.Height / OriginalImageSize.Height;
+
             foreach (var area in Areas)
             {
                 Areas[area.Key] = new SKRect(area.Value.Left * widthRatio, area.Value.Top * heightRatio,

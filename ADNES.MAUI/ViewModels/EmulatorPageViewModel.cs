@@ -1,4 +1,7 @@
-﻿using ADNES.MAUI.Helpers;
+﻿using System.Collections.Concurrent;
+using ADNES.MAUI.Helpers;
+using ADNES.MAUI.ViewModels.Enums;
+using ADNES.MAUI.ViewModels.Messages;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using SkiaSharp;
@@ -36,17 +39,34 @@ namespace ADNES.MAUI.ViewModels
         public ImageArea ConsoleImage { get; set; }
         public ImageArea EmulatorImage { get; set; }
 
+        private readonly Emulator _emulator;
+
+        private readonly ConcurrentQueue<byte[]> _frameData = new();
+
         public EmulatorPageViewModel()
         {
             BitmapRenderer = new SKBitmapRenderer(ADNES.Helpers.ColorHelper.ColorPalette);
             RenderRunning = true;
 
             ControllerImage = new ImageArea("nes_controller.png");
-            ConsoleImage = new ImageArea("nes_console.png");
+            ConsoleImage = new ImageArea("nes_console.png", new Dictionary<int, SKRect>()
+            {
+                {(int)ConsoleAreas.PowerLED, new SKRect(146, 264, 163, 275)},
+                {(int)ConsoleAreas.PowerButton, new SKRect(185, 250, 280, 296)},
+                {(int)ConsoleAreas.Cartridge, new SKRect(150, 0, 780, 135)},
+            });
             EmulatorImage = new ImageArea("nes_static.png");
+
+            _emulator = new Emulator(ProcessFrameFromADNES);
 
             _renderTask = Task.Factory.StartNew(Render);
         }
+
+        /// <summary>
+        ///     Delegate method to process a frame from the ADNES emulator as they become ready
+        /// </summary>
+        /// <param name="frameData"></param>
+        private void ProcessFrameFromADNES(byte[] frameData) => _frameData.Enqueue(frameData);
 
         [RelayCommand]
         public async Task ConsoleCanvas_OnTouch(SKTouchEventArgs e)
@@ -54,6 +74,28 @@ namespace ADNES.MAUI.ViewModels
             switch (e.ActionType)
             {
                 case SKTouchAction.Pressed:
+                    {
+                        var inArea = ConsoleImage.InArea(e.Location);
+
+                        //Not in an area
+                        if (inArea == -1)
+                            return;
+
+                        switch ((ConsoleAreas)inArea)
+                        {
+                            case ConsoleAreas.PowerLED:
+                                break;
+                            case ConsoleAreas.PowerButton:
+                                break;
+                            case ConsoleAreas.ResetButton:
+                                break;
+                            case ConsoleAreas.Cartridge:
+                                await LoadROM();
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
                     break;
                 case SKTouchAction.Moved:
                     break;
@@ -106,7 +148,7 @@ namespace ADNES.MAUI.ViewModels
             while (RenderRunning)
             {
                 //Send a message to the View to render the frame
-                WeakReferenceMessenger.Default.Send(this);
+                WeakReferenceMessenger.Default.Send(new EventMessage() { RedrawEvent = RedrawEvents.RedrawEmulator });
 
                 if (!EmulatorRunning)
                 {
@@ -115,6 +157,43 @@ namespace ADNES.MAUI.ViewModels
                     continue;
                 }
             }
+        }
+
+        public async Task<FileResult> LoadROM()
+        {
+            var options = new PickOptions()
+            {
+                FileTypes = new FilePickerFileType(
+                    new Dictionary<DevicePlatform, IEnumerable<string>>
+                    {
+                        // For iOS/macOS: a generic UTI that will at least allow binary files.
+                        { DevicePlatform.iOS, ["public.data"] },
+                        { DevicePlatform.macOS, ["public.data"] },
+
+                        // For Android: a generic binary MIME type.
+                        { DevicePlatform.Android, ["application/octet-stream"] },
+
+                        // For WinUI: the actual file extension.
+                        { DevicePlatform.WinUI, [".nes"] },
+
+                        // For Tizen: either a generic binary MIME type or a catch-all.
+                        { DevicePlatform.Tizen, ["application/octet-stream"] }
+                    }),
+                PickerTitle = "Load NES ROM..."
+            };
+
+            var result = await FilePicker.Default.PickAsync(options);
+            if (result != null)
+            {
+                //We open the file stream and read it to a byte array so we can load it into ADNES
+                await using var stream = await result.OpenReadAsync();
+                var buffer = new byte[stream.Length];
+                await stream.ReadExactlyAsync(buffer.AsMemory(0, (int)stream.Length));
+                _emulator.LoadRom(buffer);
+
+            }
+
+            return result;
         }
 
         /// <summary>

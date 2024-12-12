@@ -1,14 +1,16 @@
+using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 using System.Runtime.CompilerServices;
-using ADNES.MAUI.Helpers;
+using ADNES.MAUI.ViewModels.Enums;
+using ADNES.MAUI.ViewModels.Messages;
 
 namespace ADNES.MAUI.Pages
 {
-    public partial class EmulatorPage : ContentPage, IRecipient<EmulatorPageViewModel>
+    public partial class EmulatorPage : ContentPage, IRecipient<EventMessage>
     {
 
         public EmulatorPage()
@@ -115,9 +117,20 @@ namespace ADNES.MAUI.Pages
         ///     Method is invoked when the ViewModel sends notification that a new frame is ready to be rendered
         /// </summary>
         /// <param name="message"></param>
-        public void Receive(EmulatorPageViewModel message)
+        public void Receive(EventMessage eventMessage)
         {
-            EmulatorCanvas.InvalidateSurface();
+            switch(eventMessage.RedrawEvent)
+            {
+                case RedrawEvents.RedrawEmulator:
+                    EmulatorCanvas.InvalidateSurface();
+                    break;
+                case RedrawEvents.RedrawConsole:
+                    ConsoleCanvas.InvalidateSurface();
+                    break;
+                case RedrawEvents.RedrawController:
+                    ControllerCanvas.InvalidateSurface();
+                    break;
+            }
         }
 
         /// <summary>
