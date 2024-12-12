@@ -5,9 +5,16 @@
     /// </summary>
     public enum ConsoleAreas
     {
+        [Area(146, 264, 163, 275)]
         PowerLED,
+
+        [Area(185, 250, 280, 296)]
         PowerButton,
+
+        [Area(300, 250, 400, 296)]
         ResetButton,
+
+        [Area(150, 0, 780, 135)]
         Cartridge
     }
 }

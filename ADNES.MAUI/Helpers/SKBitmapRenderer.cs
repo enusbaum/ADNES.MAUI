@@ -1,58 +1,47 @@
-﻿using System.Runtime.CompilerServices;
-using SkiaSharp;
+﻿using SkiaSharp;
 
 namespace ADNES.MAUI.Helpers
 {
     /// <summary>
-    ///     Renderer that generates SKBitmaps from input data
+    ///     Class used for Rendering SKBitmaps with various visual elements/effects
     /// </summary>
     public class SKBitmapRenderer
     {
-        private readonly SKBitmap _bitmap = new(new SKImageInfo(256, 240));
-        private readonly SKColor[] _colorPalette;
-        private readonly Random _random = new(DateTime.Now.GetHashCode());
-
         /// <summary>
-        ///     Constructor that takes a pre-defined Color Palette
+        ///     Renders an SKBitmap that is filled with a single solid color conforming to the specified size
         /// </summary>
-        /// <param name="palette"></param>
-        public SKBitmapRenderer(System.Drawing.Color[] palette)
+        /// <param name="size"></param>
+        /// <param name="color"></param>
+        /// <returns></returns>
+        public SKBitmap RenderSolidColor(SKSize size, SKColor color)
         {
-            // We convert a pre-defined 8-bit color palette to SKColor for easy rendering
-            _colorPalette = palette.Select(c => new SKColor(c.R, c.G, c.B, c.A)).ToArray();
+            var bitmap = new SKBitmap(new SKImageInfo((int)size.Width, (int)size.Height));
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(color);
+            return bitmap;
         }
 
         /// <summary>
-        ///     Takes the input 8bpp bitmap and renders it as a SKBitmap
-        ///     using the pre-defined Color Palette
+        ///     Renders an SKBitmap with a specified text string, background color, and foreground color
         /// </summary>
-        /// <param name="bitmap"></param>
+        /// <param name="size"></param>
+        /// <param name="text"></param>
+        /// <param name="backgroundColor"></param>
+        /// <param name="foregroundColor"></param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public SKBitmap Render(Span<byte> bitmap)
+        public SKBitmap RenderText(SKSize size, string text, SKColor backgroundColor, SKColor foregroundColor)
         {
-            for (var y = 0; y < 240; y++)
+            var bitmap = new SKBitmap(new SKImageInfo((int)size.Width, (int)size.Height));
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(backgroundColor);
+            using var paint = new SKPaint
             {
-                for (var x = 0; x < 256; x++)
-                {
-                    _bitmap.SetPixel(x, y, _colorPalette[bitmap[y * 256 + x]]);
-                }
-            }
-            return _bitmap;
-        }
+                Color = foregroundColor,
+                IsAntialias = true
+            };
+            canvas.DrawText(text, size.Width / 2, size.Height / 2, paint);
+            return bitmap;
 
-        /// <summary>
-        ///     Renders a black/white noise pattern
-        /// </summary>
-        /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public Span<byte> GenerateNoise(Span<byte> buffer)
-        {
-            for (var i = 0; i < buffer.Length; i++)
-            {
-                buffer[i] = _random.Next(0, 10) <= 5 ? (byte)0xd : (byte)0x30;
-            }
-            return buffer;
         }
     }
 }

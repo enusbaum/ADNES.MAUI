@@ -9,12 +9,17 @@ namespace ADNES.MAUI.Helpers
     ///     The user can pass into this class new dimensions for the image (if the displayed image is scaled depending on the device),
     ///     and it recalculates the location of the specified areas within the image based on the new dimensions.
     /// </summary>
-    public class ImageArea
+    public class ImageArea : IDisposable
     {
         /// <summary>
         ///    Image to be used for the touch areas
         /// </summary>
         public SKBitmap Image;
+
+        /// <summary>
+        ///     The original loaded image. We use this to reset back to our original state
+        /// </summary>
+        public SKBitmap _originalImage;
 
         /// <summary>
         ///     Original size of the original image when loaded
@@ -49,11 +54,28 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public Dictionary<int, SKRect> Areas { get; set; } = new();
 
+        /// <summary>
+        ///     Task used for rendering the overlay on the image
+        /// </summary>
+        private readonly Task _overlayRenderingTask;
+
+        /// <summary>
+        ///     Overlays to be rendered on top of the image
+        /// </summary>
+        public List<ImageOverlay> Overlays { get; set; } = new();
+
+        /// <summary>
+        ///     The number of overlays currently rendered to the Image
+        /// </summary>
+        private int _renderedOverlayCount = 0;
+
         public ImageArea(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
         {
             //Set Image
-            Image = Task.Run(async () => await GetSKBitmapFromResourceAsync(resourceName)).GetAwaiter()
+            _originalImage = Task.Run(async () => await GetSKBitmapFromResourceAsync(resourceName)).GetAwaiter()
                 .GetResult();
+
+            Image = _originalImage.Copy();
 
             //Set initial image size to the original image size
             ImageSize = OriginalImageSize;
@@ -61,6 +83,8 @@ namespace ADNES.MAUI.Helpers
             //Set our reference for the original areas, as well as the currently defined areas
             _originalAreas = imageAreas;
             ResetAreas();
+
+            _overlayRenderingTask = Task.Factory.StartNew(OverlayRenderer);
         }
 
         private void ResetAreas()
@@ -119,7 +143,6 @@ namespace ADNES.MAUI.Helpers
         /// <returns></returns>
         public static async Task<SKBitmap> GetSKBitmapFromResourceAsync(string fileName)
         {
-
             await using var stream = await FileSystem.OpenAppPackageFileAsync(fileName);
             using var memoryStream = new MemoryStream();
             await stream.CopyToAsync(memoryStream);
@@ -136,5 +159,108 @@ namespace ADNES.MAUI.Helpers
         /// <param name="fileName"></param>
         /// <returns></returns>
         public static SKBitmap GetSKBitmapFromResource(string fileName) => GetSKBitmapFromResourceAsync(fileName).Result;
+
+        /// <summary>
+        ///     Adds an overlay to be rendered on top of the image
+        ///
+        ///     The Id returned is a GUID used to reference the Layer if the user wants to manually remove it
+        /// </summary>
+        /// <param name="bitmap"></param>
+        /// <param name="location"></param>
+        /// <param name="displayDuration"></param>
+        public Guid AddOverlay(SKBitmap bitmap, SKPoint location, int displayDuration = 0)
+        {
+            var id = Guid.NewGuid();
+
+            Overlays.Add(new ImageOverlay()
+            {
+                Id = id,
+                Image = bitmap,
+                Location = location,
+                DisplayStart = DateTime.Now,
+                DisplayDuration = displayDuration
+            });
+
+            return id;
+        }
+
+        /// <summary>
+        ///     Removes the overlay from the list of overlays to be rendered
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public bool RemoveOverlay(Guid id)
+        {
+            var overlay = Overlays.FirstOrDefault(x => x.Id == id);
+
+            if (overlay == null)
+                return false;
+
+            Overlays.Remove(overlay);
+
+            return true;
+        }
+
+        /// <summary>
+        ///     Task to handle rendering overlays on to the Image
+        /// </summary>
+        public void OverlayRenderer()
+        {
+            while (true)
+            {
+                Task.Delay(33); //~29.97fps -- NTSC
+
+                //No overlays to render
+                if (Overlays.Count == 0)
+                    continue;
+
+                //Check to see if any overlays have timed out, so we can remove them and re-render
+                foreach (var overlay in Overlays.ToList())
+                {
+                    //Infinite Display
+                    if (overlay.DisplayDuration <= 0)
+                        continue;
+
+                    if (overlay.DisplayStart.AddMilliseconds(overlay.DisplayDuration) < DateTime.Now) 
+                        Overlays.Remove(overlay);
+                }
+
+                //All current overlays have already been rendered? Also catches where an overlay has been removed
+                if (_renderedOverlayCount == Overlays.Count)
+                    continue;
+
+                Image = _originalImage.Copy();
+
+                //Draw the overlay on image, starting with the original image
+                using var canvas = new SKCanvas(Image);
+
+                foreach (var overlay in Overlays)
+                {
+                    //Because overlays use the same resolution/aspect ratio as the original image, we need to 
+                    //scale the overlay to the current image size based on the device being used
+                    var scale = Math.Min(ImageSize.Width / _originalImage.Width, ImageSize.Height / _originalImage.Height);
+                    var newWidth = overlay.Image.Width * scale;
+                    var newHeight = overlay.Image.Height * scale;
+                    var left = overlay.Location.X * scale;
+                    var top = overlay.Location.Y * scale;
+                    var overlayLocation = new SKPoint(left, top);
+
+                    //Draw the overlay on the image, resized properly
+                    canvas.DrawBitmap(overlay.Image.Resize(new SKSizeI((int)newWidth, (int)newHeight), SKSamplingOptions.Default), overlayLocation);
+
+                    _renderedOverlayCount++;
+                }
+
+                canvas.Save();
+            }
+        }
+
+        /// <summary>
+        ///     IDisposable implementation
+        /// </summary>
+        public void Dispose()
+        {
+            _overlayRenderingTask.Dispose();
+        }
     }
 }

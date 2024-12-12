@@ -125,9 +125,11 @@ namespace ADNES.MAUI.Pages
                     EmulatorCanvas.InvalidateSurface();
                     break;
                 case RedrawEvents.RedrawConsole:
+                    ConsoleCanvas.PaintSurface += OnCanvasPaint;
                     ConsoleCanvas.InvalidateSurface();
                     break;
                 case RedrawEvents.RedrawController:
+                    ControllerCanvas.PaintSurface += OnCanvasPaint;
                     ControllerCanvas.InvalidateSurface();
                     break;
             }

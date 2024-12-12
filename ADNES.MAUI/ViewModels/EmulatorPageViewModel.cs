@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using ADNES.MAUI.Extensions;
 using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels.Enums;
 using ADNES.MAUI.ViewModels.Messages;
@@ -11,7 +12,7 @@ namespace ADNES.MAUI.ViewModels
 {
     public partial class EmulatorPageViewModel : ViewModelBase, IDisposable
     {
-        public readonly SKBitmapRenderer BitmapRenderer;
+        public readonly SKBitmapConverter BitmapRenderer;
 
         /// <summary>
         ///     Flag to determine if the rendering loop is running
@@ -43,17 +44,19 @@ namespace ADNES.MAUI.ViewModels
 
         private readonly ConcurrentQueue<byte[]> _frameDataBuffer = new();
 
+        private readonly SKBitmapRenderer _bitmapRenderer = new();
+
         public EmulatorPageViewModel()
         {
-            BitmapRenderer = new SKBitmapRenderer(ADNES.Helpers.ColorHelper.ColorPalette);
+            BitmapRenderer = new SKBitmapConverter(ADNES.Helpers.ColorHelper.ColorPalette);
             RenderRunning = true;
 
             ControllerImage = new ImageArea("nes_controller.png");
             ConsoleImage = new ImageArea("nes_console.png", new Dictionary<int, SKRect>()
             {
-                {(int)ConsoleAreas.PowerLED, new SKRect(146, 264, 163, 275)},
-                {(int)ConsoleAreas.PowerButton, new SKRect(185, 250, 280, 296)},
-                {(int)ConsoleAreas.Cartridge, new SKRect(150, 0, 780, 135)},
+                {(int)ConsoleAreas.PowerLED, ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect},
+                {(int)ConsoleAreas.PowerButton, ConsoleAreas.PowerButton.GetAttribute<AreaAttribute>()!.Rect},
+                {(int)ConsoleAreas.Cartridge, ConsoleAreas.Cartridge.GetAttribute<AreaAttribute>()!.Rect},
             });
             EmulatorImage = new ImageArea("nes_static.png");
 
@@ -88,7 +91,16 @@ namespace ADNES.MAUI.ViewModels
                             case ConsoleAreas.PowerButton:
                                 if (!_emulator.IsRunning)
                                 {
+                                    //Turn on the Red LED by adding an overlay to the Console Image
+                                    //by drawing a solid red SKBitmap over the Power LED area
+                                    var powerButton =ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect;
+                                    ConsoleImage.AddOverlay(
+                                        _bitmapRenderer.RenderSolidColor(
+                                            powerButton.Size, SKColors.Red), powerButton.Location);
+                                    
                                     _emulator.Start();
+
+                                    NotifyView(RedrawEvents.RedrawConsole);
                                 }
                                 else
                                 {
@@ -165,10 +177,15 @@ namespace ADNES.MAUI.ViewModels
                         EmulatorScreenBitmap = BitmapRenderer.Render(result);
                 }
                 //Send a message to the View to render the frame
-                WeakReferenceMessenger.Default.Send(new EventMessage() { RedrawEvent = RedrawEvents.RedrawEmulator });
+                NotifyView(RedrawEvents.RedrawEmulator);
 
                 Task.Delay(33); //~29.97fps -- NTSC
             }
+        }
+
+        private void NotifyView(RedrawEvents redrawEvent)
+        {
+            WeakReferenceMessenger.Default.Send(new EventMessage() { RedrawEvent = redrawEvent });
         }
 
         /// <summary>
