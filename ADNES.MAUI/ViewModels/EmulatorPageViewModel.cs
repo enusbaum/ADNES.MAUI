@@ -21,7 +21,7 @@ namespace ADNES.MAUI.ViewModels
         /// <summary>
         ///    Flag to determine if the emulator is running
         /// </summary>
-        public bool EmulatorRunning;
+        public bool EmulatorRunning => _emulator.IsRunning;
 
         public SKBitmap EmulatorScreenBitmap { get; set; }
 
@@ -41,7 +41,7 @@ namespace ADNES.MAUI.ViewModels
 
         private readonly Emulator _emulator;
 
-        private readonly ConcurrentQueue<byte[]> _frameData = new();
+        private readonly ConcurrentQueue<byte[]> _frameDataBuffer = new();
 
         public EmulatorPageViewModel()
         {
@@ -66,7 +66,7 @@ namespace ADNES.MAUI.ViewModels
         ///     Delegate method to process a frame from the ADNES emulator as they become ready
         /// </summary>
         /// <param name="frameData"></param>
-        private void ProcessFrameFromADNES(byte[] frameData) => _frameData.Enqueue(frameData);
+        private void ProcessFrameFromADNES(byte[] frameData) => _frameDataBuffer.Enqueue(frameData);
 
         [RelayCommand]
         public async Task ConsoleCanvas_OnTouch(SKTouchEventArgs e)
@@ -86,6 +86,14 @@ namespace ADNES.MAUI.ViewModels
                             case ConsoleAreas.PowerLED:
                                 break;
                             case ConsoleAreas.PowerButton:
+                                if (!_emulator.IsRunning)
+                                {
+                                    _emulator.Start();
+                                }
+                                else
+                                {
+                                    _emulator.Stop();
+                                }
                                 break;
                             case ConsoleAreas.ResetButton:
                                 break;
@@ -147,19 +155,27 @@ namespace ADNES.MAUI.ViewModels
         {
             while (RenderRunning)
             {
-                //Send a message to the View to render the frame
-                WeakReferenceMessenger.Default.Send(new EventMessage() { RedrawEvent = RedrawEvents.RedrawEmulator });
-
                 if (!EmulatorRunning)
                 {
                     EmulatorScreenBitmap = BitmapRenderer.Render(BitmapRenderer.GenerateNoise(_emulatorScreen));
-                    Task.Delay(33); //~29.97fps -- NTSC
-                    continue;
                 }
+                else
+                {
+                    if (_frameDataBuffer.TryDequeue(out var result))
+                        EmulatorScreenBitmap = BitmapRenderer.Render(result);
+                }
+                //Send a message to the View to render the frame
+                WeakReferenceMessenger.Default.Send(new EventMessage() { RedrawEvent = RedrawEvents.RedrawEmulator });
+
+                Task.Delay(33); //~29.97fps -- NTSC
             }
         }
 
-        public async Task<FileResult> LoadROM()
+        /// <summary>
+        ///     Presents a file picker for the user to select which NES ROM to load
+        /// </summary>
+        /// <returns></returns>
+        public async Task LoadROM()
         {
             var options = new PickOptions()
             {
@@ -185,7 +201,7 @@ namespace ADNES.MAUI.ViewModels
             var result = await FilePicker.Default.PickAsync(options);
             if (result != null)
             {
-                //We open the file stream and read it to a byte array so we can load it into ADNES
+                //Load the selected ROM into ADNES
                 await using var stream = await result.OpenReadAsync();
                 var buffer = new byte[stream.Length];
                 await stream.ReadExactlyAsync(buffer.AsMemory(0, (int)stream.Length));
@@ -193,7 +209,6 @@ namespace ADNES.MAUI.ViewModels
 
             }
 
-            return result;
         }
 
         /// <summary>
@@ -202,7 +217,7 @@ namespace ADNES.MAUI.ViewModels
         public void Dispose()
         {
             //Gracefully Shut down the emulator
-            EmulatorRunning = false;
+            _emulator.Stop();
             RenderRunning = false;
             _renderTask.Dispose();
 
