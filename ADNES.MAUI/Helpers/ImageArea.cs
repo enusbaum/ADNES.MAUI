@@ -55,19 +55,19 @@ namespace ADNES.MAUI.Helpers
         public Dictionary<int, SKRect> Areas { get; set; } = new();
 
         /// <summary>
-        ///     Task used for rendering the overlay on the image
+        ///     Task used for rendering the layers on the image
         /// </summary>
-        private readonly Task _overlayRenderingTask;
+        private readonly Task _layerRenderingTask;
 
         /// <summary>
-        ///     Overlays to be rendered on top of the image
+        ///     Layers to be rendered on top of the image
         /// </summary>
-        public List<ImageOverlay> Overlays { get; set; } = new();
+        public List<ImageLayer> Layers { get; set; } = [];
 
         /// <summary>
-        ///     The number of overlays currently rendered to the Image
+        ///     The number of layers currently rendered to the Image
         /// </summary>
-        private int _renderedOverlayCount = 0;
+        private int _renderedLayerCount = 0;
 
         public ImageArea(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
         {
@@ -84,7 +84,7 @@ namespace ADNES.MAUI.Helpers
             _originalAreas = imageAreas;
             ResetAreas();
 
-            _overlayRenderingTask = Task.Factory.StartNew(OverlayRenderer);
+            _layerRenderingTask = Task.Factory.StartNew(LayerRender);
         }
 
         private void ResetAreas()
@@ -161,18 +161,18 @@ namespace ADNES.MAUI.Helpers
         public static SKBitmap GetSKBitmapFromResource(string fileName) => GetSKBitmapFromResourceAsync(fileName).Result;
 
         /// <summary>
-        ///     Adds an overlay to be rendered on top of the image
+        ///     Adds a Layer to be rendered on top of the image
         ///
         ///     The Id returned is a GUID used to reference the Layer if the user wants to manually remove it
         /// </summary>
         /// <param name="bitmap"></param>
         /// <param name="location"></param>
         /// <param name="displayDuration"></param>
-        public Guid AddOverlay(SKBitmap bitmap, SKPoint location, int displayDuration = 0)
+        public Guid AddLayer(SKBitmap bitmap, SKPoint location, int displayDuration = 0)
         {
             var id = Guid.NewGuid();
 
-            Overlays.Add(new ImageOverlay()
+            Layers.Add(new ImageLayer()
             {
                 Id = id,
                 Image = bitmap,
@@ -185,70 +185,70 @@ namespace ADNES.MAUI.Helpers
         }
 
         /// <summary>
-        ///     Removes the overlay from the list of overlays to be rendered
+        ///     Removes the layer from the list of Layers to be rendered
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public bool RemoveOverlay(Guid id)
+        public bool RemoveLayer(Guid id)
         {
-            var overlay = Overlays.FirstOrDefault(x => x.Id == id);
+            var layer = Layers.FirstOrDefault(x => x.Id == id);
 
-            if (overlay == null)
+            if (layer == null)
                 return false;
 
-            Overlays.Remove(overlay);
+            Layers.Remove(layer);
 
             return true;
         }
 
         /// <summary>
-        ///     Task to handle rendering overlays on to the Image
+        ///     Task to handle rendering Layers on to the Image
         /// </summary>
-        public void OverlayRenderer()
+        public void LayerRender()
         {
             while (true)
             {
                 Task.Delay(33); //~29.97fps -- NTSC
 
-                //No overlays to render
-                if (Overlays.Count == 0)
+                //No Layers to render?
+                if (Layers.Count == 0)
                     continue;
 
-                //Check to see if any overlays have timed out, so we can remove them and re-render
-                foreach (var overlay in Overlays.ToList())
+                //Check to see if any Layers have timed out, so we can remove them and re-render
+                foreach (var layer in Layers.ToList())
                 {
                     //Infinite Display
-                    if (overlay.DisplayDuration <= 0)
+                    if (layer.DisplayDuration <= 0)
                         continue;
 
-                    if (overlay.DisplayStart.AddMilliseconds(overlay.DisplayDuration) < DateTime.Now) 
-                        Overlays.Remove(overlay);
+                    if (layer.DisplayStart.AddMilliseconds(layer.DisplayDuration) < DateTime.Now) 
+                        Layers.Remove(layer);
                 }
 
-                //All current overlays have already been rendered? Also catches where an overlay has been removed
-                if (_renderedOverlayCount == Overlays.Count)
+                //All current Layers have already been rendered? Also catches where an layer has been removed
+                if (_renderedLayerCount == Layers.Count)
                     continue;
 
                 Image = _originalImage.Copy();
 
-                //Draw the overlay on image, starting with the original image
+                //Draw the layer on image, starting with the original image
                 using var canvas = new SKCanvas(Image);
 
-                foreach (var overlay in Overlays)
+                foreach (var layer in Layers)
                 {
-                    //Because overlays use the same resolution/aspect ratio as the original image, we need to 
-                    //scale the overlay to the current image size based on the device being used
+                    //Because layers use the same resolution/aspect ratio as the original image, we need to 
+                    //scale the layer to the current image size based on the device being used
                     var scale = Math.Min(ImageSize.Width / _originalImage.Width, ImageSize.Height / _originalImage.Height);
-                    var newWidth = overlay.Image.Width * scale;
-                    var newHeight = overlay.Image.Height * scale;
-                    var left = overlay.Location.X * scale;
-                    var top = overlay.Location.Y * scale;
-                    var overlayLocation = new SKPoint(left, top);
+                    var newWidth = layer.Image.Width * scale;
+                    var newHeight = layer.Image.Height * scale;
+                    var left = layer.Location.X * scale;
+                    var top = layer.Location.Y * scale;
+                    var layerLocation = new SKPoint(left, top);
 
-                    //Draw the overlay on the image, resized properly
-                    canvas.DrawBitmap(overlay.Image.Resize(new SKSizeI((int)newWidth, (int)newHeight), SKSamplingOptions.Default), overlayLocation);
+                    //Draw the layer on the image, resized properly
+                    canvas.DrawBitmap(layer.Image.Resize(new SKSizeI((int)newWidth, (int)newHeight), SKSamplingOptions.Default), layerLocation);
 
-                    _renderedOverlayCount++;
+                    _renderedLayerCount++;
                 }
 
                 canvas.Save();
@@ -260,7 +260,7 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public void Dispose()
         {
-            _overlayRenderingTask.Dispose();
+            _layerRenderingTask.Dispose();
         }
     }
 }

@@ -91,10 +91,10 @@ namespace ADNES.MAUI.ViewModels
                             case ConsoleAreas.PowerButton:
                                 if (!_emulator.IsRunning)
                                 {
-                                    //Turn on the Red LED by adding an overlay to the Console Image
+                                    //Turn on the Red LED by adding a later to the Console Image
                                     //by drawing a solid red SKBitmap over the Power LED area
                                     var powerButton =ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect;
-                                    ConsoleImage.AddOverlay(
+                                    ConsoleImage.AddLayer(
                                         _bitmapRenderer.RenderSolidColor(
                                             powerButton.Size, SKColors.Red), powerButton.Location);
                                     
