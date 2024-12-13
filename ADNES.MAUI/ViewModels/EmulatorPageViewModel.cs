@@ -12,6 +12,9 @@ namespace ADNES.MAUI.ViewModels
 {
     public partial class EmulatorPageViewModel : ViewModelBase, IDisposable
     {
+        /// <summary>
+        ///     Bitmap Renderer used for converting the 8bpp bitmap data from ADNES to a 32bpp SKBitmap
+        /// </summary>
         public readonly SKBitmapConverter BitmapRenderer;
 
         /// <summary>
@@ -36,21 +39,45 @@ namespace ADNES.MAUI.ViewModels
         /// </summary>
         private readonly Task _renderTask;
 
+        /// <summary>
+        ///     Image Areas for the Controller Image on the View
+        /// </summary>
         public ImageArea ControllerImage { get; set; }
+
+        /// <summary>
+        ///     Image Areas for the Console Image on the View
+        /// </summary>
         public ImageArea ConsoleImage { get; set; }
+
+        /// <summary>
+        ///     Image Areas for the Emulator Image on the View
+        /// </summary>
         public ImageArea EmulatorImage { get; set; }
 
+        /// <summary>
+        ///     ADNES Emulator Instance
+        /// </summary>
         private readonly Emulator _emulator;
 
+        /// <summary>
+        ///     Concurrent Queue to hold the frame data from ADNES
+        /// </summary>
         private readonly ConcurrentQueue<byte[]> _frameDataBuffer = new();
 
+        /// <summary>
+        ///     Bitmap Renderer used for Rendering SKBitmaps for layers, messages, etc.
+        /// </summary>
         private readonly SKBitmapRenderer _bitmapRenderer = new();
 
+        /// <summary>
+        ///     Default Constructor
+        /// </summary>
         public EmulatorPageViewModel()
         {
             BitmapRenderer = new SKBitmapConverter(ADNES.Helpers.ColorHelper.ColorPalette);
             RenderRunning = true;
 
+            //Setup ImageAreas for the Controller, Console, and Emulator Images to be used on the view
             ControllerImage = new ImageArea("nes_controller.png");
             ConsoleImage = new ImageArea("nes_console.png", new Dictionary<int, SKRect>()
             {
@@ -60,8 +87,10 @@ namespace ADNES.MAUI.ViewModels
             });
             EmulatorImage = new ImageArea("nes_static.png");
 
+            //Initialize the ADNES Emulator
             _emulator = new Emulator(ProcessFrameFromADNES);
 
+            //Start Render Task
             _renderTask = Task.Factory.StartNew(Render);
         }
 
@@ -71,6 +100,12 @@ namespace ADNES.MAUI.ViewModels
         /// <param name="frameData"></param>
         private void ProcessFrameFromADNES(byte[] frameData) => _frameDataBuffer.Enqueue(frameData);
 
+        /// <summary>
+        ///     Event Handler for the Console Canvas Touch Events
+        /// </summary>
+        /// <param name="e"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         [RelayCommand]
         public async Task ConsoleCanvas_OnTouch(SKTouchEventArgs e)
         {
@@ -134,6 +169,10 @@ namespace ADNES.MAUI.ViewModels
             }
         }
 
+        /// <summary>
+        ///    Event Handler for the Controller Canvas Touch Events
+        /// </summary>
+        /// <param name="e"></param>
         [RelayCommand]
         public void ControllerCanvas_OnTouch(SKTouchEventArgs e)
         {
@@ -169,20 +208,27 @@ namespace ADNES.MAUI.ViewModels
             {
                 if (!EmulatorRunning)
                 {
-                    EmulatorScreenBitmap = BitmapRenderer.Render(BitmapRenderer.GenerateNoise(_emulatorScreen));
+                    EmulatorScreenBitmap = BitmapRenderer.CovertToBitmap(BitmapRenderer.GenerateNoise(_emulatorScreen));
+                    Task.Delay(33); //~29.97fps -- NTSC
                 }
                 else
                 {
                     if (_frameDataBuffer.TryDequeue(out var result))
-                        EmulatorScreenBitmap = BitmapRenderer.Render(result);
+                        EmulatorScreenBitmap = BitmapRenderer.CovertToBitmap(result);
                 }
                 //Send a message to the View to render the frame
                 NotifyView(RedrawEvents.RedrawEmulator);
 
-                Task.Delay(33); //~29.97fps -- NTSC
+                //Render the frames as fast as possible without hogging the CPU
+                Task.Delay(1);
             }
         }
 
+        /// <summary>
+        ///     Sends a notification to the view via the WeakReferenceMessenger to redraw the specified area
+        ///     based on the RedrawEvent
+        /// </summary>
+        /// <param name="redrawEvent"></param>
         private void NotifyView(RedrawEvents redrawEvent)
         {
             WeakReferenceMessenger.Default.Send(new EventMessage() { RedrawEvent = redrawEvent });
@@ -223,7 +269,6 @@ namespace ADNES.MAUI.ViewModels
                 var buffer = new byte[stream.Length];
                 await stream.ReadExactlyAsync(buffer.AsMemory(0, (int)stream.Length));
                 _emulator.LoadRom(buffer);
-
             }
 
         }

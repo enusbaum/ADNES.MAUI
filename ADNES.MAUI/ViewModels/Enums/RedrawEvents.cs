@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ADNES.MAUI.ViewModels.Enums
+﻿namespace ADNES.MAUI.ViewModels.Enums
 {
+    /// <summary>
+    ///     Events that can be raised to trigger a redraw of the specified component on the View
+    /// </summary>
     public enum RedrawEvents
     {
         RedrawConsole,

@@ -26,7 +26,7 @@ namespace ADNES.MAUI.Pages
         /// <summary>
         ///     Event handler for when the page is appearing. This is used to load the initial images into SKBitmaps and subscribe to events.
         /// </summary>
-        protected override async void OnAppearing()
+        protected override void OnAppearing()
         {
             base.OnAppearing();
 
@@ -79,12 +79,12 @@ namespace ADNES.MAUI.Pages
         /// <param name="sender"></param>
         /// <param name="e"></param>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        private void OnCanvasPaint(object sender, SKPaintSurfaceEventArgs e)
+        private void OnCanvasPaint(object? sender, SKPaintSurfaceEventArgs e)
         {
-            var canvasReference = (SKCanvasView)sender;
+            var canvasReference = sender as SKCanvasView;
             var viewModel = (EmulatorPageViewModel)BindingContext;
 
-            var imageArea = GetImageAreaByStyleId(canvasReference.StyleId);
+            var imageArea = GetImageAreaByStyleId(canvasReference?.StyleId);
 
             DrawBitmapOnCanvas(imageArea.Image, e.Surface.Canvas, e.Info.Height, e.Info.Width);
 
@@ -131,7 +131,7 @@ namespace ADNES.MAUI.Pages
         /// <summary>
         ///     Method is invoked when the ViewModel sends notification that a new frame is ready to be rendered
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="eventMessage"></param>
         public void Receive(EventMessage eventMessage)
         {
             switch(eventMessage.RedrawEvent)

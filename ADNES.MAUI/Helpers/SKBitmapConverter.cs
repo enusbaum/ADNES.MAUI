@@ -1,5 +1,5 @@
-﻿using System.Runtime.CompilerServices;
-using SkiaSharp;
+﻿using SkiaSharp;
+using System.Runtime.CompilerServices;
 
 namespace ADNES.MAUI.Helpers
 {
@@ -29,7 +29,7 @@ namespace ADNES.MAUI.Helpers
         /// <param name="bitmap"></param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public SKBitmap Render(Span<byte> bitmap)
+        public SKBitmap CovertToBitmap(Span<byte> bitmap)
         {
             for (var y = 0; y < 240; y++)
             {
