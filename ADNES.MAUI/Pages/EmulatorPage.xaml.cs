@@ -1,12 +1,12 @@
 using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels;
+using ADNES.MAUI.ViewModels.Enums;
+using ADNES.MAUI.ViewModels.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 using System.Runtime.CompilerServices;
-using ADNES.MAUI.ViewModels.Enums;
-using ADNES.MAUI.ViewModels.Messages;
 
 namespace ADNES.MAUI.Pages
 {
@@ -16,6 +16,11 @@ namespace ADNES.MAUI.Pages
         public EmulatorPage()
         {
             InitializeComponent();
+
+            // Initial state: very thin horizontally, visible line
+            EmulatorCanvas.ScaleY = 0.01;
+            EmulatorCanvas.AnchorY = 0.5; // Expand from center vertically
+            EmulatorCanvas.Opacity = 0;
         }
 
         /// <summary>
@@ -33,6 +38,16 @@ namespace ADNES.MAUI.Pages
             {
                 (((ContentPage)sender)?.BindingContext as IDisposable)?.Dispose();
             };
+
+            // Fade in and then expand vertically
+            EmulatorCanvas.FadeTo(1, 1000, Easing.Linear).ContinueWith(_ =>
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    EmulatorCanvas.ScaleYTo(1, 2000, Easing.CubicOut);
+                });
+            });
+
         }
 
         /// <summary>
