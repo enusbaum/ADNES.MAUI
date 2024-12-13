@@ -19,30 +19,12 @@ namespace ADNES.MAUI.Helpers
         /// <summary>
         ///     The original loaded image. We use this to reset back to our original state
         /// </summary>
-        public SKBitmap _originalImage;
+        private readonly SKBitmap _originalImage;
 
         /// <summary>
         ///     Original size of the original image when loaded
         /// </summary>
-        private SKSize OriginalImageSize => new(Image.Width, Image.Height);
-
-        /// <summary>
-        ///     Size of the image after being scaled
-        /// </summary>
-        private SKSize _imageSize;
-
-        /// <summary>
-        ///     Size of the image after being scaled
-        /// </summary>
-        public SKSize ImageSize
-        {
-            get => _imageSize;
-            set
-            {
-                _imageSize = value;
-                CalculateAreas(value);
-            }
-        }
+        private SKSize _originalImageSize => new(Image.Width, Image.Height);
 
         /// <summary>
         ///     Original location of the touch areas before being scaled (we keep this for reference)
@@ -76,9 +58,6 @@ namespace ADNES.MAUI.Helpers
                 .GetResult();
 
             Image = _originalImage.Copy();
-
-            //Set initial image size to the original image size
-            ImageSize = OriginalImageSize;
 
             //Set our reference for the original areas, as well as the currently defined areas
             _originalAreas = imageAreas;
@@ -126,8 +105,8 @@ namespace ADNES.MAUI.Helpers
 
             ResetAreas();
 
-            var widthRatio = scaledImageSize.Width / OriginalImageSize.Width;
-            var heightRatio = scaledImageSize.Height / OriginalImageSize.Height;
+            var widthRatio = scaledImageSize.Width / _originalImageSize.Width;
+            var heightRatio = scaledImageSize.Height / _originalImageSize.Height;
 
             foreach (var area in Areas)
             {
@@ -236,17 +215,9 @@ namespace ADNES.MAUI.Helpers
 
                 foreach (var layer in Layers)
                 {
-                    //Because layers use the same resolution/aspect ratio as the original image, we need to 
-                    //scale the layer to the current image size based on the device being used
-                    var scale = Math.Min(ImageSize.Width / _originalImage.Width, ImageSize.Height / _originalImage.Height);
-                    var newWidth = layer.Image.Width * scale;
-                    var newHeight = layer.Image.Height * scale;
-                    var left = layer.Location.X * scale;
-                    var top = layer.Location.Y * scale;
-                    var layerLocation = new SKPoint(left, top);
-
-                    //Draw the layer on the image, resized properly
-                    canvas.DrawBitmap(layer.Image.Resize(new SKSizeI((int)newWidth, (int)newHeight), SKSamplingOptions.Default), layerLocation);
+                    //We draw the layer on the full resolution Image, so we don't need to worry about scaling
+                    //The application will automatically scale the image and the layer will scale along with it
+                    canvas.DrawBitmap(layer.Image, layer.Location);
 
                     _renderedLayerCount++;
                 }
