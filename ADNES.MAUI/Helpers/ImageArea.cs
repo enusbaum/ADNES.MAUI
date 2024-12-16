@@ -36,10 +36,6 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public Dictionary<int, SKRect> Areas { get; set; } = new();
 
-        /// <summary>
-        ///     Task used for rendering the layers on the image
-        /// </summary>
-        private readonly Task _layerRenderingTask;
 
         /// <summary>
         ///     Layers to be rendered on top of the image
@@ -62,8 +58,6 @@ namespace ADNES.MAUI.Helpers
             //Set our reference for the original areas, as well as the currently defined areas
             _originalAreas = imageAreas;
             ResetAreas();
-
-            _layerRenderingTask = Task.Factory.StartNew(LayerRender);
         }
 
         private void ResetAreas()
@@ -185,45 +179,33 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public void LayerRender()
         {
-            while (true)
+            //No Layers to render?
+            if (Layers.Count == 0)
+                return;
+
+            //All current Layers have already been rendered? Also catches where an layer has been removed
+            if (_renderedLayerCount == Layers.Count)
+                return;
+
+            _image = _originalImage.Copy();
+
+            //Draw the layer on image, starting with the original image
+            using var canvas = new SKCanvas(_image);
+
+            foreach (var layer in Layers)
             {
-                Task.Delay(33); //~29.97fps -- NTSC
-
-                //No Layers to render?
-                if (Layers.Count == 0)
+                //If the layer has a display duration, we check if it has expired, if so just skip. Another process will clean up expired layers
+                if (layer.DisplayDuration > 0 && DateTime.Now.Subtract(layer.DisplayStart).TotalMilliseconds > layer.DisplayDuration)
                     continue;
 
-                //Check to see if any Layers have timed out, so we can remove them and re-render
-                foreach (var layer in Layers.ToList())
-                {
-                    //Infinite Display
-                    if (layer.DisplayDuration <= 0)
-                        continue;
+                //We draw the layer on the full resolution Image, so we don't need to worry about scaling
+                //The application will automatically scale the image and the layer will scale along with it
+                canvas.DrawBitmap(layer.Image, layer.Location);
 
-                    if (layer.DisplayStart.AddMilliseconds(layer.DisplayDuration) < DateTime.Now) 
-                        Layers.Remove(layer);
-                }
-
-                //All current Layers have already been rendered? Also catches where an layer has been removed
-                if (_renderedLayerCount == Layers.Count)
-                    continue;
-
-                Image = _originalImage.Copy();
-
-                //Draw the layer on image, starting with the original image
-                using var canvas = new SKCanvas(Image);
-
-                foreach (var layer in Layers)
-                {
-                    //We draw the layer on the full resolution Image, so we don't need to worry about scaling
-                    //The application will automatically scale the image and the layer will scale along with it
-                    canvas.DrawBitmap(layer.Image, layer.Location);
-
-                    _renderedLayerCount++;
-                }
-
-                canvas.Save();
+                _renderedLayerCount++;
             }
+
+            canvas.Save();
         }
 
         /// <summary>
@@ -231,7 +213,6 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public void Dispose()
         {
-            _layerRenderingTask.Dispose();
         }
     }
 }

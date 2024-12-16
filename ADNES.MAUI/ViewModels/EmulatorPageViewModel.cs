@@ -128,7 +128,8 @@ namespace ADNES.MAUI.ViewModels
                                 {
                                     //Turn on the Red LED by adding a later to the Console Image
                                     //by drawing a solid red SKBitmap over the Power LED area
-                                    var powerButton =ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect;
+                                    var powerButton = ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect;
+
                                     ConsoleImage.AddLayer(
                                         _bitmapRenderer.RenderSolidColor(
                                             powerButton.Size, SKColors.Red), powerButton.Location);
@@ -209,7 +210,7 @@ namespace ADNES.MAUI.ViewModels
                 if (!EmulatorRunning)
                 {
                     EmulatorScreenBitmap = BitmapRenderer.CovertToBitmap(BitmapRenderer.GenerateNoise(_emulatorScreen));
-                    Task.Delay(33); //~29.97fps -- NTSC
+                    Thread.Sleep(33); //~29.97fps -- NTSC
                 }
                 else
                 {
@@ -220,7 +221,7 @@ namespace ADNES.MAUI.ViewModels
                 NotifyView(RedrawEvents.RedrawEmulator);
 
                 //Render the frames as fast as possible without hogging the CPU
-                Task.Delay(1);
+                Thread.Sleep(1);
             }
         }
 

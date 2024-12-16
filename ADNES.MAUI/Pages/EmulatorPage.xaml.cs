@@ -98,9 +98,8 @@ namespace ADNES.MAUI.Pages
         /// <param name="e"></param>
         private void OnEmulatorCanvasPaint(object sender, SKPaintSurfaceEventArgs e)
         {
-            var viewModel = (EmulatorPageViewModel)BindingContext;
             DrawBitmapOnCanvas(
-                (viewModel.RenderRunning ? viewModel.EmulatorScreenBitmap : viewModel.EmulatorImage.Image),
+                (((EmulatorPageViewModel)BindingContext).RenderRunning ? ((EmulatorPageViewModel)BindingContext).EmulatorScreenBitmap : ((EmulatorPageViewModel)BindingContext).EmulatorImage.Image),
                 e.Surface.Canvas,
                 e.Info.Height,
                 e.Info.Width
