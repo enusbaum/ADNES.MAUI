@@ -14,7 +14,19 @@ namespace ADNES.MAUI.Helpers
         /// <summary>
         ///    Image to be used for the touch areas
         /// </summary>
-        public SKBitmap Image;
+        private SKBitmap _image;
+
+        public SKBitmap Image
+        {
+            get
+            {
+
+                LayerRender();
+
+                return _image;
+            }
+            set => _image = value;
+        }
 
         /// <summary>
         ///     The original loaded image. We use this to reset back to our original state
