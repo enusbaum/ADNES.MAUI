@@ -1,5 +1,4 @@
-﻿using ADNES.MAUI.ViewModels;
-using CommunityToolkit.Maui;
+﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 
@@ -16,8 +15,7 @@ namespace ADNES.MAUI
                 .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                    fonts.AddFont("nintendo-nes-font.ttf", "NES");
                 });
 
 #if DEBUG

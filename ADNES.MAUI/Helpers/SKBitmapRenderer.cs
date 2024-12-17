@@ -31,17 +31,35 @@ namespace ADNES.MAUI.Helpers
         /// <returns></returns>
         public SKBitmap RenderText(SKSize size, string text, SKColor backgroundColor, SKColor foregroundColor)
         {
-            var bitmap = new SKBitmap(new SKImageInfo((int)size.Width, (int)size.Height));
+            // Create a bitmap and associated canvas
+            var info = new SKImageInfo((int)size.Width, (int)size.Height);
+            var bitmap = new SKBitmap(info);
             using var canvas = new SKCanvas(bitmap);
-            canvas.Clear(backgroundColor);
-            using var paint = new SKPaint
-            {
-                Color = foregroundColor,
-                IsAntialias = true
-            };
-            canvas.DrawText(text, size.Width / 2, size.Height / 2, paint);
-            return bitmap;
 
+            // Clear the background
+            canvas.Clear(backgroundColor);
+
+            // Set up the paint
+            using var paint = new SKPaint();
+            paint.Color = foregroundColor;
+            paint.IsAntialias = true;
+
+            // Create an SKFont
+            var fileStream = FileSystem.OpenAppPackageFileAsync("nintendo-nes-font.ttf").GetAwaiter().GetResult();
+            using var font = new SKFont(SKTypeface.FromStream(fileStream), 24);
+
+            // Measure the text to center it
+            var textWidth = font.MeasureText(text, paint);
+            var textHeight = font.Size;
+
+            // Compute coordinates to center the text
+            var x = (size.Width - textWidth) / 2f;
+            var y = (size.Height / 2f) + (textHeight / 2f);
+
+            // Draw the text at the computed coordinates
+            canvas.DrawText(text, x, y, font, paint);
+
+            return bitmap;
         }
     }
 }

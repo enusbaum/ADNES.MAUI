@@ -78,8 +78,19 @@ namespace ADNES.MAUI.ViewModels
             RenderRunning = true;
 
             //Setup ImageAreas for the Controller, Console, and Emulator Images to be used on the view
-            ControllerImage = new ImageArea("nes_controller.png");
-            ConsoleImage = new ImageArea("nes_console.png", new Dictionary<int, SKRect>()
+            ControllerImage = new ImageArea("nes_controller.png", new Dictionary<int, SKRect>
+                {
+                    { (int)ControllerAreas.DPadUp, ControllerAreas.DPadUp.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.DPadDown, ControllerAreas.DPadDown.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.DPadLeft, ControllerAreas.DPadLeft.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.DPadRight, ControllerAreas.DPadRight.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.AButton, ControllerAreas.AButton.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.BButton, ControllerAreas.BButton.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.StartButton, ControllerAreas.StartButton.GetAttribute<AreaAttribute>()!.Rect},
+                    { (int)ControllerAreas.SelectButton, ControllerAreas.SelectButton.GetAttribute<AreaAttribute>()!.Rect},
+                }
+                );
+            ConsoleImage = new ImageArea("nes_console.png", new Dictionary<int, SKRect>
             {
                 {(int)ConsoleAreas.PowerLED, ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect},
                 {(int)ConsoleAreas.PowerButton, ConsoleAreas.PowerButton.GetAttribute<AreaAttribute>()!.Rect},
@@ -133,7 +144,7 @@ namespace ADNES.MAUI.ViewModels
                                     ConsoleImage.AddLayer(
                                         _bitmapRenderer.RenderSolidColor(
                                             powerButton.Size, SKColors.Red), powerButton.Location);
-                                    
+
                                     _emulator.Start();
 
                                     NotifyView(RedrawEvents.RedrawConsole);
@@ -146,7 +157,16 @@ namespace ADNES.MAUI.ViewModels
                             case ConsoleAreas.ResetButton:
                                 break;
                             case ConsoleAreas.Cartridge:
-                                await LoadROM();
+                                if (await LoadROM())
+                                {
+                                    var messageBanner = EmulatorAreas.CenterBanner.GetAttribute<AreaAttribute>()!.Rect;
+
+                                    EmulatorImage.AddLayer(
+                                        _bitmapRenderer.RenderText(messageBanner.Size, "ROM LOADED", SKColors.Black, SKColors.White),
+                                        messageBanner.Location, 3000);
+
+                                    NotifyView(RedrawEvents.RedrawEmulator);
+                                }
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
@@ -209,13 +229,13 @@ namespace ADNES.MAUI.ViewModels
             {
                 if (!EmulatorRunning)
                 {
-                    EmulatorScreenBitmap = BitmapRenderer.CovertToBitmap(BitmapRenderer.GenerateNoise(_emulatorScreen));
+                    EmulatorImage.SetBaseImage(BitmapRenderer.CovertToBitmap(BitmapRenderer.GenerateNoise(_emulatorScreen)));
                     Thread.Sleep(33); //~29.97fps -- NTSC
                 }
                 else
                 {
-                    if (_frameDataBuffer.TryDequeue(out var result))
-                        EmulatorScreenBitmap = BitmapRenderer.CovertToBitmap(result);
+                    if (_frameDataBuffer.TryDequeue(out var result)) 
+                        EmulatorImage.SetBaseImage(BitmapRenderer.CovertToBitmap(result));
                 }
                 //Send a message to the View to render the frame
                 NotifyView(RedrawEvents.RedrawEmulator);
@@ -239,7 +259,7 @@ namespace ADNES.MAUI.ViewModels
         ///     Presents a file picker for the user to select which NES ROM to load
         /// </summary>
         /// <returns></returns>
-        public async Task LoadROM()
+        public async Task<bool> LoadROM()
         {
             var options = new PickOptions()
             {
@@ -270,8 +290,10 @@ namespace ADNES.MAUI.ViewModels
                 var buffer = new byte[stream.Length];
                 await stream.ReadExactlyAsync(buffer.AsMemory(0, (int)stream.Length));
                 _emulator.LoadRom(buffer);
+                return true;
             }
 
+            return false;
         }
 
         /// <summary>

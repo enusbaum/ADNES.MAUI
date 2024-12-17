@@ -20,34 +20,34 @@ namespace ADNES.MAUI.Helpers
         {
             get
             {
+                if (Layers.Count == 0)
+                    return _baseImage;
 
                 LayerRender();
-
                 return _image;
             }
             set => _image = value;
         }
 
         /// <summary>
-        ///     The original loaded image. We use this to reset back to our original state
+        ///     The base image. We use this to reset back to our original state
         /// </summary>
-        private readonly SKBitmap _originalImage;
+        private SKBitmap _baseImage;
 
         /// <summary>
-        ///     Original size of the original image when loaded
+        ///     Original size of the base image when loaded
         /// </summary>
-        private SKSize _originalImageSize => new(Image.Width, Image.Height);
+        private SKSize _baseImageSize => new(Image.Width, Image.Height);
 
         /// <summary>
         ///     Original location of the touch areas before being scaled (we keep this for reference)
         /// </summary>
-        private readonly Dictionary<int, SKRect>? _originalAreas;
+        private readonly Dictionary<int, SKRect>? _baseAreas;
 
         /// <summary>
         ///     Dictionary of Touch Areas and their Rectangles for touch events
         /// </summary>
         public Dictionary<int, SKRect> Areas { get; set; } = new();
-
 
         /// <summary>
         ///     Layers to be rendered on top of the image
@@ -62,20 +62,41 @@ namespace ADNES.MAUI.Helpers
         public ImageArea(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
         {
             //Set Image
-            _originalImage = Task.Run(async () => await GetSKBitmapFromResourceAsync(resourceName)).GetAwaiter()
+            _baseImage = Task.Run(async () => await GetSKBitmapFromResourceAsync(resourceName)).GetAwaiter()
                 .GetResult();
 
-            Image = _originalImage.Copy();
+            Image = _baseImage.Copy();
 
             //Set our reference for the original areas, as well as the currently defined areas
-            _originalAreas = imageAreas;
+            _baseAreas = imageAreas;
             ResetAreas();
+        }
+
+        public ImageArea(SKBitmap image, Dictionary<int, SKRect>? imageAreas = null)
+        {
+            _baseImage = image;
+            Image = _baseImage.Copy();
+
+            //Set our reference for the original areas, as well as the currently defined areas
+            _baseAreas = imageAreas;
+            ResetAreas();
+        }
+
+        public void SetBaseImage(SKBitmap baseImage)
+        {
+            //Verify the new image has the same dimensions as the original image
+            if (baseImage.Width != _baseImage.Width || baseImage.Height != _baseImage.Height)
+                throw new Exception("New image dimensions do not match the original image dimensions");
+
+            _baseImage = baseImage;
+
+            LayerRender(true);
         }
 
         private void ResetAreas()
         {
-            if (_originalAreas != null)
-                Areas = new Dictionary<int, SKRect>(_originalAreas);
+            if (_baseAreas != null)
+                Areas = new Dictionary<int, SKRect>(_baseAreas);
         }
 
         /// <summary>
@@ -106,13 +127,13 @@ namespace ADNES.MAUI.Helpers
         public void CalculateAreas(SKSize scaledImageSize)
         {
             //No areas were set, so we can't calculate anything
-            if (_originalAreas == null)
+            if (_baseAreas == null)
                 return;
 
             ResetAreas();
 
-            var widthRatio = scaledImageSize.Width / _originalImageSize.Width;
-            var heightRatio = scaledImageSize.Height / _originalImageSize.Height;
+            var widthRatio = scaledImageSize.Width / _baseImageSize.Width;
+            var heightRatio = scaledImageSize.Height / _baseImageSize.Height;
 
             foreach (var area in Areas)
             {
@@ -143,7 +164,7 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        public static SKBitmap GetSKBitmapFromResource(string fileName) => GetSKBitmapFromResourceAsync(fileName).Result;
+        public static SKBitmap GetSKBitmapFromResource(string fileName) => GetSKBitmapFromResourceAsync(fileName).GetAwaiter().GetResult();
 
         /// <summary>
         ///     Adds a Layer to be rendered on top of the image
@@ -189,17 +210,22 @@ namespace ADNES.MAUI.Helpers
         /// <summary>
         ///     Task to handle rendering Layers on to the Image
         /// </summary>
-        public void LayerRender()
+        /// <param name="forceRender">Forces a Layer Render, skipping checks to see if it's needed</param>
+        public void LayerRender(bool forceRender = false)
         {
-            //No Layers to render?
-            if (Layers.Count == 0)
-                return;
+            //If we're not forcing a render, check to see if we even need to do this
+            if (!forceRender)
+            {
+                //No Layers to render?
+                if (Layers.Count == 0)
+                    return;
 
-            //All current Layers have already been rendered? Also catches where an layer has been removed
-            if (_renderedLayerCount == Layers.Count)
-                return;
+                //All current Layers have already been rendered? Also catches where an layer has been removed
+                if (_renderedLayerCount == Layers.Count)
+                    return;
+            }
 
-            _image = _originalImage.Copy();
+            _image = _baseImage.Copy();
 
             //Draw the layer on image, starting with the original image
             using var canvas = new SKCanvas(_image);

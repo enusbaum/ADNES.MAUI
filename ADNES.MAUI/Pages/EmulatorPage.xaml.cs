@@ -44,7 +44,7 @@ namespace ADNES.MAUI.Pages
             {
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    EmulatorCanvas.ScaleYTo(1, 2000, Easing.CubicOut);
+                    EmulatorCanvas.ScaleYTo(1, 1500, Easing.CubicOut);
                 });
             });
 
@@ -99,7 +99,7 @@ namespace ADNES.MAUI.Pages
         private void OnEmulatorCanvasPaint(object sender, SKPaintSurfaceEventArgs e)
         {
             DrawBitmapOnCanvas(
-                (((EmulatorPageViewModel)BindingContext).RenderRunning ? ((EmulatorPageViewModel)BindingContext).EmulatorScreenBitmap : ((EmulatorPageViewModel)BindingContext).EmulatorImage.Image),
+                ((EmulatorPageViewModel)BindingContext).EmulatorImage.Image,
                 e.Surface.Canvas,
                 e.Info.Height,
                 e.Info.Width
