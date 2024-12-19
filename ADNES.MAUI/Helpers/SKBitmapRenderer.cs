@@ -46,9 +46,12 @@ namespace ADNES.MAUI.Helpers
 
             // Create an SKFont
             var fileStream = FileSystem.OpenAppPackageFileAsync("nintendo-nes-font.ttf").GetAwaiter().GetResult();
-            using var font = new SKFont(SKTypeface.FromStream(fileStream), 24);
+            using var font = new SKFont(SKTypeface.FromStream(fileStream), size.Height);
 
-            // Measure the text to center it
+            //Measure the text and reduce the font size until it fits the width of the bitmap
+            while (font.MeasureText(text, paint) > size.Width)
+                font.Size--;
+
             var textWidth = font.MeasureText(text, paint);
             var textHeight = font.Size;
 
