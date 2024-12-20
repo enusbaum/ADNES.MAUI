@@ -16,7 +16,7 @@
             if (DeviceInfo.Idiom == DeviceIdiom.Desktop)
             {
                 appWindow.Width = 400;
-                appWindow.Height = 800;
+                appWindow.Height = 675;
             }
 #endif
 
