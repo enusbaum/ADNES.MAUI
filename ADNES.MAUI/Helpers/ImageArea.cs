@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+﻿using System.Runtime.CompilerServices;
+using SkiaSharp;
 
 namespace ADNES.MAUI.Helpers
 {
@@ -20,10 +21,8 @@ namespace ADNES.MAUI.Helpers
         {
             get
             {
-                if (Layers.Count == 0)
-                    return _baseImage;
-
                 LayerRender();
+
                 return _image;
             }
             set => _image = value;
@@ -211,6 +210,7 @@ namespace ADNES.MAUI.Helpers
         ///     Task to handle rendering Layers on to the Image
         /// </summary>
         /// <param name="forceRender">Forces a Layer Render, skipping checks to see if it's needed</param>
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public void LayerRender(bool forceRender = false)
         {
             //If we're not forcing a render, check to see if we even need to do this

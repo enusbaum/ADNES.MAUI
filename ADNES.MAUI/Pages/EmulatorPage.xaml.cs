@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels;
 using ADNES.MAUI.ViewModels.Enums;
@@ -6,7 +7,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
-using System.Runtime.CompilerServices;
 
 namespace ADNES.MAUI.Pages
 {
