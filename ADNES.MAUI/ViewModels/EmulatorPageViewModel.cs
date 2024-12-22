@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using ADNES.Enums;
 using ADNES.MAUI.Extensions;
 using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels.Enums;
@@ -68,6 +69,11 @@ namespace ADNES.MAUI.ViewModels
         ///     Bitmap Renderer used for Rendering SKBitmaps for layers, messages, etc.
         /// </summary>
         private readonly SKBitmapRenderer _bitmapRenderer = new();
+
+        /// <summary>
+        ///     ID of the Pause Graphic Layer so it can be removed on unpause
+        /// </summary>
+        private Guid PauseGraphicId;
 
         /// <summary>
         ///     Default Constructor
@@ -212,6 +218,48 @@ namespace ADNES.MAUI.ViewModels
                 case SKTouchAction.Exited:
                     break;
                 case SKTouchAction.WheelChanged:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        /// <summary>
+        ///    Event Handler for the Emulator Canvas Touch Events
+        /// </summary>
+        /// <param name="e"></param>
+        [RelayCommand]
+        public void EmulatorCanvas_OnTouch(SKTouchEventArgs e)
+        {
+            //Only support touch events on the emulator canvas if it's running
+            if (!_emulator.IsRunning)
+                return;
+
+            switch (e.ActionType)
+            {
+                case SKTouchAction.Pressed:
+                    switch (_emulator.State)
+                    {
+                        case EmulatorState.Running:
+                        {
+                            _emulator.Pause();
+
+                                var pauseGraphic = EmulatorAreas.PauseGraphic.GetAttribute<AreaAttribute>()!.Rect;
+
+                            PauseGraphicId = EmulatorImage.AddLayer(
+                                _bitmapRenderer.RenderPauseGraphic(pauseGraphic.Size, SKColors.Black, SKColors.White), pauseGraphic.Location);
+
+                                NotifyView(RedrawEvents.RedrawEmulator);
+                            break;
+                        }
+                        case EmulatorState.Paused:
+                        {
+                            EmulatorImage.RemoveLayer(PauseGraphicId);
+                         
+                            _emulator.Unpause();
+                        }
+                            break;
+                    }
                     break;
                 default:
                     break;

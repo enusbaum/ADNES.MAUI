@@ -26,6 +26,7 @@
                 <toolkit:EventToCommandBehavior
                     x:TypeArguments="skiaTypes:SKTouchEventArgs"
                     EventName="Touch"
+                    BindingContext="{Binding Path=BindingContext, Source={x:Reference ConsoleCanvas}, x:DataType=SKCanvasView}"
                     Command="{Binding ConsoleCanvas_OnTouchCommand}" />
             </skia:SKCanvasView.Behaviors>
         </skia:SKCanvasView>
@@ -38,6 +39,13 @@
                 VerticalOptions="Start"
                 SizeChanged="OnCanvasSizeChanged"
                 >
+            <skia:SKCanvasView.Behaviors>
+                <toolkit:EventToCommandBehavior
+                    x:TypeArguments="skiaTypes:SKTouchEventArgs"
+                    EventName="Touch"
+                    BindingContext="{Binding Path=BindingContext, Source={x:Reference EmulatorCanvas}, x:DataType=SKCanvasView}"
+                    Command="{Binding EmulatorCanvas_OnTouchCommand}" />
+            </skia:SKCanvasView.Behaviors>
         </skia:SKCanvasView>
 
         <skia:SKCanvasView 
@@ -52,6 +60,7 @@
                 <toolkit:EventToCommandBehavior
                     x:TypeArguments="skiaTypes:SKTouchEventArgs"
                     EventName="Touch"
+                    BindingContext="{Binding Path=BindingContext, Source={x:Reference ControllerCanvas}, x:DataType=SKCanvasView}"
                     Command="{Binding ControllerCanvas_OnTouchCommand}" />
             </skia:SKCanvasView.Behaviors>
         </skia:SKCanvasView>

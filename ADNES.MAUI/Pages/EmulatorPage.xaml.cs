@@ -23,6 +23,7 @@ namespace ADNES.MAUI.Pages
             EmulatorCanvas.Opacity = 0;
         }
 
+
         /// <summary>
         ///     Event handler for when the page is appearing. This is used to load the initial images into SKBitmaps and subscribe to events.
         /// </summary>
@@ -47,6 +48,7 @@ namespace ADNES.MAUI.Pages
                     EmulatorCanvas.ScaleYTo(1, 1500, Easing.CubicOut);
                 });
             });
+
 
         }
 

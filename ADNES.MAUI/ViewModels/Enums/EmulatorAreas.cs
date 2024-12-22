@@ -39,6 +39,12 @@
         ///     Area that is 40 pixels tall across the entire center of the screen for message banners to appear
         /// </summary>
         [Area(0, 100, 256, 140)]
-        CenterBanner
+        CenterBanner,
+
+        /// <summary>
+        ///     Area that consumes 25% of the screen area (centered) for the pause graphic to be displayed
+        /// </summary>
+        [Area(64, 60, 192, 180)]
+        PauseGraphic
     }
 }

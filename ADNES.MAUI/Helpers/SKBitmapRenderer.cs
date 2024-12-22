@@ -64,5 +64,41 @@ namespace ADNES.MAUI.Helpers
 
             return bitmap;
         }
+
+        /// <summary>
+        ///     Renders an SKBitmap with a pause graphic (two vertical bars) in the center of the specified size with
+        ///     the specified background and foreground colors.
+        /// </summary>
+        /// <param name="size"></param>
+        /// <param name="backgroundColor"></param>
+        /// <param name="foregroundColor"></param>
+        /// <returns></returns>
+        public SKBitmap RenderPauseGraphic(SKSize size, SKColor backgroundColor, SKColor foregroundColor)
+        {
+            // Create a bitmap and associated canvas
+            var info = new SKImageInfo((int)size.Width, (int)size.Height);
+            var bitmap = new SKBitmap(info);
+            using var canvas = new SKCanvas(bitmap);
+
+            // Clear the background
+            canvas.Clear(backgroundColor);
+
+            // Set up the paint
+            using var paint = new SKPaint();
+            paint.Color = foregroundColor;
+            paint.IsAntialias = true;
+
+            // Compute the coordinates for the pause graphic
+            var barWidth = size.Width / 10f;
+            var barHeight = size.Height / 2f;
+            var leftBarX = (size.Width / 2f) - (barWidth * 2f);
+            var rightBarX = (size.Width / 2f) + barWidth;
+            var barY = (size.Height / 2f) - (barHeight / 2f);
+
+            // Draw the pause graphic
+            canvas.DrawRect(leftBarX, barY, barWidth, barHeight, paint);
+            canvas.DrawRect(rightBarX, barY, barWidth, barHeight, paint);
+            return bitmap;
+        }
     }
 }
