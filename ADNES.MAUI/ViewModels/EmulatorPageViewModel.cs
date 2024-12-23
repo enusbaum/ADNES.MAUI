@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using ADNES.Controller.Enums;
 using ADNES.Enums;
 using ADNES.MAUI.Extensions;
 using ADNES.MAUI.Helpers;
@@ -6,6 +7,8 @@ using ADNES.MAUI.ViewModels.Enums;
 using ADNES.MAUI.ViewModels.Messages;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using SharpHook;
+using SharpHook.Native;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
@@ -169,7 +172,7 @@ namespace ADNES.MAUI.ViewModels
 
                                     EmulatorImage.AddLayer(
                                         _bitmapRenderer.RenderText(messageBanner.Size, "ROM LOADED", SKColors.Black, SKColors.White),
-                                        messageBanner.Location, 3000);
+                                        messageBanner.Location, 2000);
 
                                     NotifyView(RedrawEvents.RedrawEmulator);
                                 }
@@ -177,20 +180,8 @@ namespace ADNES.MAUI.ViewModels
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
+                        break;
                     }
-                    break;
-                case SKTouchAction.Moved:
-                    break;
-                case SKTouchAction.Released:
-                    break;
-                case SKTouchAction.Cancelled:
-                    break;
-                case SKTouchAction.Entered:
-                    return;
-                case SKTouchAction.Exited:
-                    break;
-                case SKTouchAction.WheelChanged:
-                    break;
                 default:
                     break;
             }
@@ -205,24 +196,187 @@ namespace ADNES.MAUI.ViewModels
         {
             switch (e.ActionType)
             {
+                //We'll see if the touch was in any ControllerAreas and send the appropriate button press
                 case SKTouchAction.Pressed:
-                    break;
-                case SKTouchAction.Moved:
-                    break;
+                    {
+                        var inArea = (ControllerAreas)ControllerImage.InArea(e.Location);
+
+                        switch (inArea)
+                        {
+                            case ControllerAreas.DPadUp:
+                                PushButton(Buttons.Up);
+                                break;
+                            case ControllerAreas.DPadDown:
+                                PushButton(Buttons.Down);
+                                break;
+                            case ControllerAreas.DPadLeft:
+                                PushButton(Buttons.Left);
+                                break;
+                            case ControllerAreas.DPadRight:
+                                PushButton(Buttons.Right);
+                                break;
+                            case ControllerAreas.AButton:
+                                PushButton(Buttons.A);
+                                break;
+                            case ControllerAreas.BButton:
+                                PushButton(Buttons.B);
+                                break;
+                            case ControllerAreas.StartButton:
+                                PushButton(Buttons.Start);
+                                break;
+                            case ControllerAreas.SelectButton:
+                                PushButton(Buttons.Select);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+
+                //We'll see if any touch has released in any ControllerAreas and send the appropriate button release
                 case SKTouchAction.Released:
-                    break;
-                case SKTouchAction.Cancelled:
-                    break;
-                case SKTouchAction.Entered:
-                    return;
-                case SKTouchAction.Exited:
-                    break;
-                case SKTouchAction.WheelChanged:
-                    break;
+                {
+                        var inArea = (ControllerAreas)ControllerImage.InArea(e.Location);
+
+                        switch (inArea)
+                        {
+                            case ControllerAreas.DPadUp:
+                                ReleaseButton(Buttons.Up);
+                                break;
+                            case ControllerAreas.DPadDown:
+                                ReleaseButton(Buttons.Down);
+                                break;
+                            case ControllerAreas.DPadLeft:
+                                ReleaseButton(Buttons.Left);
+                                break;
+                            case ControllerAreas.DPadRight:
+                                ReleaseButton(Buttons.Right);
+                                break;
+                            case ControllerAreas.AButton:
+                                ReleaseButton(Buttons.A);
+                                break;
+                            case ControllerAreas.BButton:
+                                ReleaseButton(Buttons.B);
+                                break;
+                            case ControllerAreas.StartButton:
+                                ReleaseButton(Buttons.Start);
+                                break;
+                            case ControllerAreas.SelectButton:
+                                ReleaseButton(Buttons.Select);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                }
                 default:
                     break;
             }
         }
+
+        /// <summary>
+        ///     Handles input from the keyboard for Windows/Mac versions of the MAUI app
+        /// </summary>
+        public void Keyboard_OnKeyPress(KeyboardHookEventArgs keyboardHookEventArgs)
+        {
+            //Ignore Key Presses if Emulator isn't running
+            if (!_emulator.IsRunning || _emulator.State == EmulatorState.Paused)
+                return;
+
+            switch (keyboardHookEventArgs.Data.KeyCode)
+            {
+                case KeyCode.VcW:
+                case KeyCode.VcUp:
+                    PushButton(Buttons.Up);
+                    break;
+                case KeyCode.VcS:
+                case KeyCode.VcDown:
+                    PushButton(Buttons.Down);
+                    break;
+                case KeyCode.VcA:
+                case KeyCode.VcLeft:
+                    PushButton(Buttons.Left);
+                    break;
+                case KeyCode.VcD:
+                case KeyCode.VcRight:
+                    PushButton(Buttons.Right);
+                    break;
+                case KeyCode.VcComma:
+                    PushButton(Buttons.A);
+                    break;
+                case KeyCode.VcPeriod:
+                    PushButton(Buttons.B);
+                    break;
+                case KeyCode.VcRightShift:
+                    PushButton(Buttons.Select);
+                    break;
+                case KeyCode.VcEnter:
+                    PushButton(Buttons.Start);
+                    break;
+                default:
+                    break;
+
+            }
+        }
+
+        /// <summary>
+        ///     Handles key release events for the keyboard
+        /// </summary>
+        public void Keyboard_OnKeyRelease(KeyboardHookEventArgs keyboardHookEventArgs)
+        {
+            //Ignore Key Releases if Emulator isn't running
+            if (!_emulator.IsRunning || _emulator.State == EmulatorState.Paused)
+                return;
+
+            switch (keyboardHookEventArgs.Data.KeyCode)
+            {
+                case KeyCode.VcW:
+                case KeyCode.VcUp:
+                    ReleaseButton(Buttons.Up);
+                    break;
+                case KeyCode.VcS:
+                case KeyCode.VcDown:
+                    ReleaseButton(Buttons.Down);
+                    break;
+                case KeyCode.VcA:
+                case KeyCode.VcLeft:
+                    ReleaseButton(Buttons.Left);
+                    break;
+                case KeyCode.VcD:
+                case KeyCode.VcRight:
+                    ReleaseButton(Buttons.Right);
+                    break;
+                case KeyCode.VcComma:
+                    ReleaseButton(Buttons.A);
+                    break;
+                case KeyCode.VcPeriod:
+                    ReleaseButton(Buttons.B);
+                    break;
+                case KeyCode.VcRightShift:
+                    ReleaseButton(Buttons.Select);
+                    break;
+                case KeyCode.VcEnter:
+                    ReleaseButton(Buttons.Start);
+                    break;
+                default:
+                    break;
+
+            }
+        }
+
+        /// <summary>
+        ///     Sends button press to the ADNES Emulator
+        /// </summary>
+        /// <param name="button"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public void PushButton(Buttons button) => _emulator.Controller1.ButtonPress(button);
+
+        /// <summary>
+        ///     Sends button release to the ADNES Emulator
+        /// </summary>
+        /// <param name="button"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public void ReleaseButton(Buttons button) => _emulator.Controller1.ButtonRelease(button);
 
         /// <summary>
         ///    Event Handler for the Emulator Canvas Touch Events
@@ -241,23 +395,23 @@ namespace ADNES.MAUI.ViewModels
                     switch (_emulator.State)
                     {
                         case EmulatorState.Running:
-                        {
-                            _emulator.Pause();
+                            {
+                                _emulator.Pause();
 
                                 var pauseGraphic = EmulatorAreas.PauseGraphic.GetAttribute<AreaAttribute>()!.Rect;
 
-                            PauseGraphicId = EmulatorImage.AddLayer(
-                                _bitmapRenderer.RenderPauseGraphic(pauseGraphic.Size, SKColors.Black, SKColors.White), pauseGraphic.Location);
+                                PauseGraphicId = EmulatorImage.AddLayer(
+                                    _bitmapRenderer.RenderPauseGraphic(pauseGraphic.Size, SKColors.Black, SKColors.White), pauseGraphic.Location);
 
                                 NotifyView(RedrawEvents.RedrawEmulator);
-                            break;
-                        }
+                                break;
+                            }
                         case EmulatorState.Paused:
-                        {
-                            EmulatorImage.RemoveLayer(PauseGraphicId);
-                         
-                            _emulator.Unpause();
-                        }
+                            {
+                                EmulatorImage.RemoveLayer(PauseGraphicId);
+
+                                _emulator.Unpause();
+                            }
                             break;
                     }
                     break;
@@ -289,7 +443,7 @@ namespace ADNES.MAUI.ViewModels
                     if (_emulator.State is EmulatorState.Paused or EmulatorState.Stopped)
                         continue;
 
-                    if (_frameDataBuffer.TryDequeue(out var result)) 
+                    if (_frameDataBuffer.TryDequeue(out var result))
                         EmulatorImage.SetBaseImage(BitmapRenderer.CovertToBitmap(result));
                 }
                 //Send a message to the View to render the frame

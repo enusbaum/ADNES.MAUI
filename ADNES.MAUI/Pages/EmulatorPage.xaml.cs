@@ -1,17 +1,22 @@
+using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using ADNES.MAUI.Helpers;
 using ADNES.MAUI.ViewModels;
 using ADNES.MAUI.ViewModels.Enums;
 using ADNES.MAUI.ViewModels.Messages;
 using CommunityToolkit.Mvvm.Messaging;
+using SharpHook.Reactive;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 
 namespace ADNES.MAUI.Pages
 {
-    public partial class EmulatorPage : ContentPage, IRecipient<EventMessage>
+    public partial class EmulatorPage : ContentPage, IRecipient<EventMessage>, IDisposable
     {
+
+        private SimpleReactiveGlobalHook _keyboardHook = new();
+        private Task _keyboardHookTask;
 
         public EmulatorPage()
         {
@@ -21,6 +26,13 @@ namespace ADNES.MAUI.Pages
             EmulatorCanvas.ScaleY = 0.01;
             EmulatorCanvas.AnchorY = 0.5; // Expand from center vertically
             EmulatorCanvas.Opacity = 0;
+
+#if WINDOWS 
+            //Subscribe to keyboard events
+            _keyboardHook.KeyPressed .Subscribe(((EmulatorPageViewModel)BindingContext).Keyboard_OnKeyPress);
+            _keyboardHook.KeyReleased.Subscribe(((EmulatorPageViewModel)BindingContext).Keyboard_OnKeyRelease);
+            _keyboardHookTask = Task.Run(async () => await _keyboardHook.RunAsync());
+#endif
         }
 
 
@@ -62,7 +74,6 @@ namespace ADNES.MAUI.Pages
         private void OnCanvasSizeChanged(object sender, EventArgs e)
         {
             var canvasReference = (SKCanvasView)sender;
-            var viewModel = (EmulatorPageViewModel)BindingContext;
 
             var imageArea = GetImageAreaByStyleId(canvasReference.StyleId);
 
@@ -165,5 +176,11 @@ namespace ADNES.MAUI.Pages
                 "ControllerCanvas" => ((EmulatorPageViewModel)BindingContext).ControllerImage,
                 _ => throw new ArgumentOutOfRangeException()
             };
+
+        public void Dispose()
+        {
+            _keyboardHookTask.Dispose();
+            _keyboardHook.Dispose();
+        }
     }
 }
