@@ -8,6 +8,7 @@ namespace ADNES.MAUI.Helpers
     /// </summary>
     public class SKBitmapConverter
     {
+        private readonly RingBuffer<SKBitmap> _bitmapBuffer = new(10, new SKBitmap(new SKImageInfo(256, 240)));
         private readonly SKColor[] _colorPalette;
         private readonly Random _random = new(DateTime.Now.GetHashCode());
 
@@ -30,7 +31,7 @@ namespace ADNES.MAUI.Helpers
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public SKBitmap CovertToBitmap(Span<byte> bitmap)
         {
-            var output = new SKBitmap(new SKImageInfo(256, 240));
+            var output = _bitmapBuffer.GetNext();
 
             for (var y = 0; y < 240; y++)
             {
