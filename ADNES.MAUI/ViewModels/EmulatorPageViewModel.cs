@@ -275,6 +275,9 @@ namespace ADNES.MAUI.ViewModels
         {
             while (RenderRunning)
             {
+                //Render the frames as fast as possible without hogging the CPU
+                Thread.Sleep(1);
+
                 if (!EmulatorRunning)
                 {
                     EmulatorImage.SetBaseImage(BitmapRenderer.CovertToBitmap(BitmapRenderer.GenerateNoise(_emulatorScreen)));
@@ -282,14 +285,15 @@ namespace ADNES.MAUI.ViewModels
                 }
                 else
                 {
+                    //If we're paused or for some reason the emulator Task is running but the state is stopped(?), wait
+                    if (_emulator.State is EmulatorState.Paused or EmulatorState.Stopped)
+                        continue;
+
                     if (_frameDataBuffer.TryDequeue(out var result)) 
                         EmulatorImage.SetBaseImage(BitmapRenderer.CovertToBitmap(result));
                 }
                 //Send a message to the View to render the frame
                 NotifyView(RedrawEvents.RedrawEmulator);
-
-                //Render the frames as fast as possible without hogging the CPU
-                Thread.Sleep(1);
             }
         }
 
