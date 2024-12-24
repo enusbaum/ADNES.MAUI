@@ -76,7 +76,12 @@ namespace ADNES.MAUI.Pages
         {
             var canvasReference = (SKCanvasView)sender;
 
+            if (canvasReference.Width == 0)
+                return;
+
             var imageArea = GetImageAreaByStyleId(canvasReference.StyleId);
+
+            imageArea.PixelDensity = DeviceDisplay.MainDisplayInfo.Density;
 
             var aspectRatio = (float)imageArea.Image.Height / imageArea.Image.Width;
             var desiredHeight = (float)canvasReference.Width * aspectRatio;

@@ -58,6 +58,13 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         private int _renderedLayerCount = 0;
 
+        /// <summary>
+        ///     Pixel Density of the device
+        ///
+        ///     Used to properly calculate the touch areas when the image is scaled
+        /// </summary>
+        public double PixelDensity = 0;
+
         public ImageArea(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
         {
             //Set Image
@@ -99,12 +106,20 @@ namespace ADNES.MAUI.Helpers
         }
 
         /// <summary>
-        ///     Determines if the point is within any of the touch areas and returns the key
+        ///     Determines if the point is within any of the touch areas (taking pixel density into account) and returns the key
         /// </summary>
         /// <param name="point"></param>
         /// <returns></returns>
         public int InArea(SKPoint point)
         {
+            //No areas were set, so we can't calculate anything
+            if (Areas.Count == 0)
+                return -1;
+
+            //Scale the point based on the pixel density
+            point.X /= (float)PixelDensity;
+            point.Y /= (float)PixelDensity;
+
             if (!Areas.Any(x => x.Value.Contains(point)))
                 return -1;
 
