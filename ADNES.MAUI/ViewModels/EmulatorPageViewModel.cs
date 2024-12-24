@@ -204,28 +204,28 @@ namespace ADNES.MAUI.ViewModels
                         switch (inArea)
                         {
                             case ControllerAreas.DPadUp:
-                                PushButton(Buttons.Up);
+                                _emulator.Controller1.ButtonPress(Buttons.Up);
                                 break;
                             case ControllerAreas.DPadDown:
-                                PushButton(Buttons.Down);
+                                _emulator.Controller1.ButtonPress(Buttons.Down);
                                 break;
                             case ControllerAreas.DPadLeft:
-                                PushButton(Buttons.Left);
+                                _emulator.Controller1.ButtonPress(Buttons.Left);
                                 break;
                             case ControllerAreas.DPadRight:
-                                PushButton(Buttons.Right);
+                                _emulator.Controller1.ButtonPress(Buttons.Right);
                                 break;
                             case ControllerAreas.AButton:
-                                PushButton(Buttons.A);
+                                _emulator.Controller1.ButtonPress(Buttons.A);
                                 break;
                             case ControllerAreas.BButton:
-                                PushButton(Buttons.B);
+                                _emulator.Controller1.ButtonPress(Buttons.B);
                                 break;
                             case ControllerAreas.StartButton:
-                                PushButton(Buttons.Start);
+                                _emulator.Controller1.ButtonPress(Buttons.Start);
                                 break;
                             case ControllerAreas.SelectButton:
-                                PushButton(Buttons.Select);
+                                _emulator.Controller1.ButtonPress(Buttons.Select);
                                 break;
                             default:
                                 break;
@@ -241,28 +241,28 @@ namespace ADNES.MAUI.ViewModels
                         switch (inArea)
                         {
                             case ControllerAreas.DPadUp:
-                                ReleaseButton(Buttons.Up);
+                                _emulator.Controller1.ButtonRelease(Buttons.Up);
                                 break;
                             case ControllerAreas.DPadDown:
-                                ReleaseButton(Buttons.Down);
+                                _emulator.Controller1.ButtonRelease(Buttons.Down);
                                 break;
                             case ControllerAreas.DPadLeft:
-                                ReleaseButton(Buttons.Left);
+                                _emulator.Controller1.ButtonRelease(Buttons.Left);
                                 break;
                             case ControllerAreas.DPadRight:
-                                ReleaseButton(Buttons.Right);
+                                _emulator.Controller1.ButtonRelease(Buttons.Right);
                                 break;
                             case ControllerAreas.AButton:
-                                ReleaseButton(Buttons.A);
+                                _emulator.Controller1.ButtonRelease(Buttons.A);
                                 break;
                             case ControllerAreas.BButton:
-                                ReleaseButton(Buttons.B);
+                                _emulator.Controller1.ButtonRelease(Buttons.B);
                                 break;
                             case ControllerAreas.StartButton:
-                                ReleaseButton(Buttons.Start);
+                                _emulator.Controller1.ButtonRelease(Buttons.Start);
                                 break;
                             case ControllerAreas.SelectButton:
-                                ReleaseButton(Buttons.Select);
+                                _emulator.Controller1.ButtonRelease(Buttons.Select);
                                 break;
                             default:
                                 break;
@@ -287,31 +287,31 @@ namespace ADNES.MAUI.ViewModels
             {
                 case KeyCode.VcW:
                 case KeyCode.VcUp:
-                    PushButton(Buttons.Up);
+                    _emulator.Controller1.ButtonPress(Buttons.Up);
                     break;
                 case KeyCode.VcS:
                 case KeyCode.VcDown:
-                    PushButton(Buttons.Down);
+                    _emulator.Controller1.ButtonPress(Buttons.Down);
                     break;
                 case KeyCode.VcA:
                 case KeyCode.VcLeft:
-                    PushButton(Buttons.Left);
+                    _emulator.Controller1.ButtonPress(Buttons.Left);
                     break;
                 case KeyCode.VcD:
                 case KeyCode.VcRight:
-                    PushButton(Buttons.Right);
+                    _emulator.Controller1.ButtonPress(Buttons.Right);
                     break;
                 case KeyCode.VcComma:
-                    PushButton(Buttons.A);
+                    _emulator.Controller1.ButtonPress(Buttons.A);
                     break;
                 case KeyCode.VcPeriod:
-                    PushButton(Buttons.B);
+                    _emulator.Controller1.ButtonPress(Buttons.B);
                     break;
                 case KeyCode.VcRightShift:
-                    PushButton(Buttons.Select);
+                    _emulator.Controller1.ButtonPress(Buttons.Select);
                     break;
                 case KeyCode.VcEnter:
-                    PushButton(Buttons.Start);
+                    _emulator.Controller1.ButtonPress(Buttons.Start);
                     break;
                 default:
                     break;
@@ -332,51 +332,37 @@ namespace ADNES.MAUI.ViewModels
             {
                 case KeyCode.VcW:
                 case KeyCode.VcUp:
-                    ReleaseButton(Buttons.Up);
+                    _emulator.Controller1.ButtonRelease(Buttons.Up);
                     break;
                 case KeyCode.VcS:
                 case KeyCode.VcDown:
-                    ReleaseButton(Buttons.Down);
+                    _emulator.Controller1.ButtonRelease(Buttons.Down);
                     break;
                 case KeyCode.VcA:
                 case KeyCode.VcLeft:
-                    ReleaseButton(Buttons.Left);
+                    _emulator.Controller1.ButtonRelease(Buttons.Left);
                     break;
                 case KeyCode.VcD:
                 case KeyCode.VcRight:
-                    ReleaseButton(Buttons.Right);
+                    _emulator.Controller1.ButtonRelease(Buttons.Right);
                     break;
                 case KeyCode.VcComma:
-                    ReleaseButton(Buttons.A);
+                    _emulator.Controller1.ButtonRelease(Buttons.A);
                     break;
                 case KeyCode.VcPeriod:
-                    ReleaseButton(Buttons.B);
+                    _emulator.Controller1.ButtonRelease(Buttons.B);
                     break;
                 case KeyCode.VcRightShift:
-                    ReleaseButton(Buttons.Select);
+                    _emulator.Controller1.ButtonRelease(Buttons.Select);
                     break;
                 case KeyCode.VcEnter:
-                    ReleaseButton(Buttons.Start);
+                    _emulator.Controller1.ButtonRelease(Buttons.Start);
                     break;
                 default:
                     break;
 
             }
         }
-
-        /// <summary>
-        ///     Sends button press to the ADNES Emulator
-        /// </summary>
-        /// <param name="button"></param>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public void PushButton(Buttons button) => _emulator.Controller1.ButtonPress(button);
-
-        /// <summary>
-        ///     Sends button release to the ADNES Emulator
-        /// </summary>
-        /// <param name="button"></param>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public void ReleaseButton(Buttons button) => _emulator.Controller1.ButtonRelease(button);
 
         /// <summary>
         ///    Event Handler for the Emulator Canvas Touch Events
