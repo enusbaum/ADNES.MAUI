@@ -165,6 +165,38 @@ namespace ADNES.MAUI.Helpers
         /// <returns></returns>
         public static SKBitmap GetSKBitmapFromResource(string fileName) => GetSKBitmapFromResourceAsync(fileName).GetAwaiter().GetResult();
 
+
+        /// <summary>
+        ///     Displays the areas on the image as a visual aid for debugging.
+        ///
+        ///     Areas are rendered as rectangles with a semi-transparent fill as their own layer
+        /// </summary>
+        /// <param name="area">Specific Area to Display (Default: -1 for all)</param>
+        public void ShowAreas(int area = -1)
+        {
+            var bitmap = _baseImage.Copy();
+            using var canvas = new SKCanvas(bitmap);
+
+            foreach (var touchArea in Areas)
+            {
+                if (area != -1 && touchArea.Key != area)
+                    continue;
+                var paint = new SKPaint
+                {
+                    Color = new SKColor(255, 0, 0, 128),
+                    Style = SKPaintStyle.Fill
+                };
+                canvas.DrawRect(touchArea.Value, paint);
+            }
+
+            Layers.Add(new ImageLayer
+            {
+                Id = Guid.NewGuid(),
+                Image = bitmap,
+                Location = new SKPoint(0, 0)
+            });
+        }
+
         /// <summary>
         ///     Adds a Layer to be rendered on top of the image
         ///
