@@ -81,6 +81,7 @@ namespace ADNES.MAUI.Pages
 
             var imageArea = GetImageAreaByStyleId(canvasReference.StyleId);
 
+            //Set the pixel density of the Image Area so we can properly map the touch events
             imageArea.PixelDensity = DeviceDisplay.MainDisplayInfo.Density;
 
             var aspectRatio = (float)imageArea.Image.Height / imageArea.Image.Width;
