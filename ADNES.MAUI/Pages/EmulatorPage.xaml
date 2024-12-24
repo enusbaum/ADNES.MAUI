@@ -13,15 +13,27 @@
         <localViewModels:EmulatorPageViewModel />
     </ContentPage.BindingContext>
 
-    <VerticalStackLayout>
+    <!-- Replace VerticalStackLayout with Grid -->
+    <Grid HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand" BackgroundColor="Black">
+
+        <Grid.RowDefinitions>
+            <!-- Top row for Console (Auto-height) -->
+            <RowDefinition Height="Auto"/>
+            <!-- Middle row for Emulator (fills remaining space) -->
+            <RowDefinition Height="*"/>
+            <!-- Bottom row for Controller (Auto-height) -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Console Canvas (top) -->
         <skia:SKCanvasView 
+            Grid.Row="0"
             x:Name="ConsoleCanvas"
             PaintSurface="OnCanvasPaint"
             EnableTouchEvents="True"
             HorizontalOptions="FillAndExpand"
-            VerticalOptions="Start" 
-            SizeChanged="OnCanvasSizeChanged"
-            >
+            VerticalOptions="Start"
+            SizeChanged="OnCanvasSizeChanged">
             <skia:SKCanvasView.Behaviors>
                 <toolkit:EventToCommandBehavior
                     x:TypeArguments="skiaTypes:SKTouchEventArgs"
@@ -30,15 +42,16 @@
                     Command="{Binding ConsoleCanvas_OnTouchCommand}" />
             </skia:SKCanvasView.Behaviors>
         </skia:SKCanvasView>
-        
-        <skia:SKCanvasView 
-                x:Name="EmulatorCanvas"
-                PaintSurface="OnEmulatorCanvasPaint"
-                EnableTouchEvents="True"
-                HorizontalOptions="FillAndExpand"
-                VerticalOptions="Start"
-                SizeChanged="OnCanvasSizeChanged"
-                >
+
+        <!-- Emulator Canvas (middle) -->
+        <skia:SKCanvasView
+            Grid.Row="1"
+            x:Name="EmulatorCanvas"
+            PaintSurface="OnEmulatorCanvasPaint"
+            EnableTouchEvents="True"
+            HorizontalOptions="FillAndExpand"
+            VerticalOptions="CenterAndExpand"
+            SizeChanged="OnCanvasSizeChanged">
             <skia:SKCanvasView.Behaviors>
                 <toolkit:EventToCommandBehavior
                     x:TypeArguments="skiaTypes:SKTouchEventArgs"
@@ -48,14 +61,15 @@
             </skia:SKCanvasView.Behaviors>
         </skia:SKCanvasView>
 
-        <skia:SKCanvasView 
+        <!-- Controller Canvas (bottom) -->
+        <skia:SKCanvasView
+            Grid.Row="2"
             x:Name="ControllerCanvas"
             PaintSurface="OnCanvasPaint"
             EnableTouchEvents="True"
             HorizontalOptions="FillAndExpand"
-            VerticalOptions="Start" 
-            SizeChanged="OnCanvasSizeChanged"
-            >
+            VerticalOptions="End"
+            SizeChanged="OnCanvasSizeChanged">
             <skia:SKCanvasView.Behaviors>
                 <toolkit:EventToCommandBehavior
                     x:TypeArguments="skiaTypes:SKTouchEventArgs"
@@ -64,5 +78,6 @@
                     Command="{Binding ControllerCanvas_OnTouchCommand}" />
             </skia:SKCanvasView.Behaviors>
         </skia:SKCanvasView>
-    </VerticalStackLayout>
+
+    </Grid>
 </ContentPage>
