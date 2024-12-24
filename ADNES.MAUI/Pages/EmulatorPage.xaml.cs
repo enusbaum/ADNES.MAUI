@@ -15,7 +15,7 @@ namespace ADNES.MAUI.Pages
     public partial class EmulatorPage : ContentPage, IRecipient<EventMessage>, IDisposable
     {
 
-        private SimpleReactiveGlobalHook _keyboardHook = new();
+        private readonly SimpleReactiveGlobalHook? _keyboardHook;
         private Task _keyboardHookTask;
 
         public EmulatorPage()
@@ -29,6 +29,7 @@ namespace ADNES.MAUI.Pages
 
 #if WINDOWS 
             //Subscribe to keyboard events
+            _keyboardHook = new SimpleReactiveGlobalHook();
             _keyboardHook.KeyPressed .Subscribe(((EmulatorPageViewModel)BindingContext).Keyboard_OnKeyPress);
             _keyboardHook.KeyReleased.Subscribe(((EmulatorPageViewModel)BindingContext).Keyboard_OnKeyRelease);
             _keyboardHookTask = Task.Run(async () => await _keyboardHook.RunAsync());
@@ -179,7 +180,7 @@ namespace ADNES.MAUI.Pages
 
         public void Dispose()
         {
-            _keyboardHookTask.Dispose();
+            _keyboardHookTask?.Dispose();
             _keyboardHook.Dispose();
         }
     }
