@@ -496,6 +496,9 @@ namespace ADNES.MAUI.ViewModels
             //Gracefully Shut down the emulator
             _emulator.Stop();
             RenderRunning = false;
+
+            //Wait for _renderTask to complete then dispose of it
+            _renderTask.Wait();
             _renderTask.Dispose();
 
             //Clean up the Bitmap
