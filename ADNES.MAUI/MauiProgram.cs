@@ -12,11 +12,7 @@ namespace ADNES.MAUI
             builder
                 .UseMauiApp<App>()
                 .UseSkiaSharp()
-                .UseMauiCommunityToolkit()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("nintendo-nes-font.ttf", "NES");
-                });
+                .UseMauiCommunityToolkit();
 
 #if DEBUG
     		builder.Logging.AddDebug();

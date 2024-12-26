@@ -86,4 +86,8 @@
 	  <Folder Include="Resources\Images\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <MauiFont Include="Resources\Raw\nintendo-nes-font.ttf" />
+	</ItemGroup>
+
 </Project>
