@@ -175,7 +175,7 @@ namespace ADNES.MAUI.Pages
         /// <param name="styleId"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        private ImageArea GetImageAreaByStyleId(string styleId) =>
+        private LayeredImage GetImageAreaByStyleId(string styleId) =>
             styleId switch //Determine which Canvas is raising the event and load the associated bitmap
             {
                 "ConsoleCanvas" => ((EmulatorPageViewModel)BindingContext).ConsoleImage,

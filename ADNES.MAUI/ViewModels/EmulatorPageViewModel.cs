@@ -46,17 +46,17 @@ namespace ADNES.MAUI.ViewModels
         /// <summary>
         ///     Image Areas for the Controller Image on the View
         /// </summary>
-        public ImageArea ControllerImage { get; set; }
+        public LayeredImage ControllerImage { get; set; }
 
         /// <summary>
         ///     Image Areas for the Console Image on the View
         /// </summary>
-        public ImageArea ConsoleImage { get; set; }
+        public LayeredImage ConsoleImage { get; set; }
 
         /// <summary>
         ///     Image Areas for the Emulator Image on the View
         /// </summary>
-        public ImageArea EmulatorImage { get; set; }
+        public LayeredImage EmulatorImage { get; set; }
 
         /// <summary>
         ///     ADNES Emulator Instance
@@ -87,7 +87,7 @@ namespace ADNES.MAUI.ViewModels
             RenderRunning = true;
 
             //Setup ImageAreas for the Controller, Console, and Emulator Images to be used on the view
-            ControllerImage = new ImageArea("nes_controller.png", new Dictionary<int, SKRect>
+            ControllerImage = new LayeredImage("nes_controller.png", new Dictionary<int, SKRect>
                 {
                     { (int)ControllerAreas.DPadUp, ControllerAreas.DPadUp.GetAttribute<AreaAttribute>()!.Rect},
                     { (int)ControllerAreas.DPadDown, ControllerAreas.DPadDown.GetAttribute<AreaAttribute>()!.Rect},
@@ -99,13 +99,13 @@ namespace ADNES.MAUI.ViewModels
                     { (int)ControllerAreas.SelectButton, ControllerAreas.SelectButton.GetAttribute<AreaAttribute>()!.Rect},
                 }
                 );
-            ConsoleImage = new ImageArea("nes_console.png", new Dictionary<int, SKRect>
+            ConsoleImage = new LayeredImage("nes_console.png", new Dictionary<int, SKRect>
             {
                 {(int)ConsoleAreas.PowerLED, ConsoleAreas.PowerLED.GetAttribute<AreaAttribute>()!.Rect},
                 {(int)ConsoleAreas.PowerButton, ConsoleAreas.PowerButton.GetAttribute<AreaAttribute>()!.Rect},
                 {(int)ConsoleAreas.Cartridge, ConsoleAreas.Cartridge.GetAttribute<AreaAttribute>()!.Rect},
             });
-            EmulatorImage = new ImageArea("nes_static.png");
+            EmulatorImage = new LayeredImage("nes_static.png");
 
             //Initialize the ADNES Emulator
             _emulator = new Emulator(ProcessFrameFromADNES);
@@ -275,6 +275,44 @@ namespace ADNES.MAUI.ViewModels
         }
 
         /// <summary>
+        ///     Renders a Touch Animation on the specified touch area for 750ms
+        /// </summary>
+        /// <param name="touchArea"></param>
+        private void RenderTouchAnimation(SKRect touchArea)
+        {
+            //Find the center coordinates of the touch area
+            var centerX = touchArea.Left + (touchArea.Width / 2);
+            var centerY = touchArea.Top + (touchArea.Height / 2);
+
+            var touchAnimationSize = new SKSize(75, 75);
+
+            //Call the BitmapRenderer to render a touch animation
+            var touchAnimation =
+                _bitmapRenderer.RenderExpandingCircles(20, touchAnimationSize, SKColors.Yellow, SKColors.Transparent);
+
+            //Add the touch animation layers to the Controller Image, calculating how long each image should be delayed/displayed based on the number of images and the total time (750ms)
+            var animationLayers = new List<Guid>();
+            var displayTimePerFrame = 500 / touchAnimation.Count;
+            for (var i = 0; i < touchAnimation.Count; i++)
+            {
+                animationLayers.Add(ControllerImage.AddLayer(touchAnimation[i], new SKPoint(centerX - (touchAnimationSize.Width/2), centerY - (touchAnimationSize.Height/2)), displayTimePerFrame, displayTimePerFrame * i));
+            }
+
+            //Kick off a task to notify the view to redraw the Controller Image 30 times a second and after 750ms remove the touch animation layers
+            Task.Factory.StartNew(async () =>
+            {
+                for (var i = 0; i < 30; i++)
+                {
+                    NotifyView(RedrawEvents.RedrawController);
+                    await Task.Delay(33);
+                }
+                ControllerImage.RemoveLayers(animationLayers);
+                NotifyView(RedrawEvents.RedrawController);
+            });
+
+        }
+
+        /// <summary>
         ///     Handles input from the keyboard for Windows/Mac versions of the MAUI app
         /// </summary>
         public void Keyboard_OnKeyPress(KeyboardHookEventArgs keyboardHookEventArgs)
@@ -288,30 +326,38 @@ namespace ADNES.MAUI.ViewModels
                 case KeyCode.VcW:
                 case KeyCode.VcUp:
                     _emulator.Controller1.ButtonPress(Buttons.Up);
+                    RenderTouchAnimation(ControllerAreas.DPadUp.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcS:
                 case KeyCode.VcDown:
                     _emulator.Controller1.ButtonPress(Buttons.Down);
+                    RenderTouchAnimation(ControllerAreas.DPadDown.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcA:
                 case KeyCode.VcLeft:
                     _emulator.Controller1.ButtonPress(Buttons.Left);
+                    RenderTouchAnimation(ControllerAreas.DPadLeft.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcD:
                 case KeyCode.VcRight:
                     _emulator.Controller1.ButtonPress(Buttons.Right);
+                    RenderTouchAnimation(ControllerAreas.DPadRight.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcComma:
                     _emulator.Controller1.ButtonPress(Buttons.A);
+                    RenderTouchAnimation(ControllerAreas.AButton.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcPeriod:
                     _emulator.Controller1.ButtonPress(Buttons.B);
+                    RenderTouchAnimation(ControllerAreas.BButton.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcRightShift:
                     _emulator.Controller1.ButtonPress(Buttons.Select);
+                    RenderTouchAnimation(ControllerAreas.SelectButton.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 case KeyCode.VcEnter:
                     _emulator.Controller1.ButtonPress(Buttons.Start);
+                    RenderTouchAnimation(ControllerAreas.StartButton.GetAttribute<AreaAttribute>()!.Rect);
                     break;
                 default:
                     break;

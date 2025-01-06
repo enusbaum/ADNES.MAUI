@@ -10,8 +10,13 @@ namespace ADNES.MAUI.Helpers
     ///     The user can pass into this class new dimensions for the image (if the displayed image is scaled depending on the device),
     ///     and it recalculates the location of the specified areas within the image based on the new dimensions.
     /// </summary>
-    public class ImageArea : IDisposable
+    public class LayeredImage : IDisposable
     {
+        /// <summary>
+        ///     Lock used to prevent multiple threads from rendering the image resources while a render is happening
+        /// </summary>
+        private readonly Lock _renderLock = new();
+
         /// <summary>
         ///    Image to be used for the touch areas
         /// </summary>
@@ -65,7 +70,7 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         public double PixelDensity = 0;
 
-        public ImageArea(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
+        public LayeredImage(string resourceName, Dictionary<int, SKRect>? imageAreas = null)
         {
             //Set Image
             _baseImage = Task.Run(async () => await GetSKBitmapFromResourceAsync(resourceName)).GetAwaiter()
@@ -78,7 +83,7 @@ namespace ADNES.MAUI.Helpers
             ResetAreas();
         }
 
-        public ImageArea(SKBitmap image, Dictionary<int, SKRect>? imageAreas = null)
+        public LayeredImage(SKBitmap image, Dictionary<int, SKRect>? imageAreas = null)
         {
             _baseImage = image;
             Image = _baseImage.Copy();
@@ -174,14 +179,6 @@ namespace ADNES.MAUI.Helpers
         }
 
         /// <summary>
-        ///     Sync version of GetSKBitmapFromResourceAsync
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <returns></returns>
-        public static SKBitmap GetSKBitmapFromResource(string fileName) => GetSKBitmapFromResourceAsync(fileName).GetAwaiter().GetResult();
-
-
-        /// <summary>
         ///     Displays the areas on the image as a visual aid for debugging.
         ///
         ///     Areas are rendered as rectangles with a semi-transparent fill as their own layer
@@ -214,26 +211,47 @@ namespace ADNES.MAUI.Helpers
 
         /// <summary>
         ///     Adds a Layer to be rendered on top of the image
-        ///
-        ///     The Id returned is a GUID used to reference the Layer if the user wants to manually remove it
+        /// 
+        ///     The ID returned is a GUID used to reference the Layer if the user wants to manually remove it
         /// </summary>
         /// <param name="bitmap"></param>
         /// <param name="location"></param>
         /// <param name="displayDuration"></param>
-        public Guid AddLayer(SKBitmap bitmap, SKPoint location, int displayDuration = 0)
+        /// <param name="displayDelay"></param>
+        public Guid AddLayer(SKBitmap bitmap, SKPoint location, int displayDuration = 0, int displayDelay = 0)
         {
-            var id = Guid.NewGuid();
-
-            Layers.Add(new ImageLayer()
+            using (var scope = _renderLock.EnterScope())
             {
-                Id = id,
-                Image = bitmap,
-                Location = location,
-                DisplayStart = DateTime.Now,
-                DisplayDuration = displayDuration
-            });
+                var id = Guid.NewGuid();
 
-            return id;
+                Layers.Add(new ImageLayer()
+                {
+                    Id = id,
+                    Image = bitmap,
+                    Location = location,
+                    LayerAddedTimestamp = DateTime.Now,
+                    DisplayDuration = displayDuration,
+                    DisplayDelay = displayDelay
+                });
+
+                return id;
+            }
+        }
+
+        /// <summary>
+        ///     Adds multiple Layers to be rendered on top of the image
+        /// </summary>
+        /// <param name="bitmaps"></param>
+        /// <param name="location"></param>
+        /// <param name="displayDuration"></param>
+        /// <param name="displayDelay"></param>
+        /// <returns></returns>
+        public List<Guid> AddLayers(IEnumerable<SKBitmap> bitmaps, SKPoint location, int displayDuration = 0, int displayDelay = 0)
+        {
+            using (var scope = _renderLock.EnterScope())
+            {
+                return bitmaps.Select(bitmap => AddLayer(bitmap, location, displayDuration, displayDelay)).ToList();
+            }
         }
 
         /// <summary>
@@ -241,16 +259,36 @@ namespace ADNES.MAUI.Helpers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public bool RemoveLayer(Guid id)
+        public void RemoveLayer(Guid id)
         {
-            var layer = Layers.FirstOrDefault(x => x.Id == id);
+            using (var scope = _renderLock.EnterScope())
+            {
+                var layer = Layers.FirstOrDefault(x => x.Id == id);
 
-            if (layer == null)
-                return false;
+                if (layer == null)
+                    return;
 
-            Layers.Remove(layer);
+                Layers.Remove(layer);
+            }
+        }
 
-            return true;
+        /// <summary>
+        ///     Removes multiple layers from the list of Layers to be rendered
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        public void RemoveLayers(IEnumerable<Guid> ids)
+        {
+            using (var scope = _renderLock.EnterScope())
+            {
+                foreach (var id in ids)
+                {
+                    var layer = Layers.FirstOrDefault(x => x.Id == id);
+                    if (layer == null)
+                        continue;
+                    Layers.Remove(layer);
+                }
+            }
         }
 
         /// <summary>
@@ -260,37 +298,37 @@ namespace ADNES.MAUI.Helpers
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public void LayerRender(bool forceRender = false)
         {
-            //If we're not forcing a render, check to see if we even need to do this
-            if (!forceRender)
+            using (var scope = _renderLock.EnterScope())
             {
-                //No Layers to render?
-                if (Layers.Count == 0)
-                    return;
+                //If we're not forcing a render, check to see if we even need to do this
+                if (!forceRender)
+                {
+                    //No Layers to render?
+                    if (Layers.Count == 0 && _renderedLayerCount == 0)
+                        return;
 
-                //All current Layers have already been rendered? Also catches where an layer has been removed
-                if (_renderedLayerCount == Layers.Count)
-                    return;
+                    //If no layers are set to Display and no layers are already rendered, we don't need to render anything
+                    if (Layers.All(x => x.Status != ImageLayerStatus.Display) && _renderedLayerCount == 0)
+                        return;
+                }
+
+                _renderedLayerCount = 0;
+                _image = _baseImage.Copy();
+
+                //Draw the layer on image, starting with the original image
+                using var canvas = new SKCanvas(_image);
+                foreach (var layer in Layers.Where(x=> x.Status == ImageLayerStatus.Display))
+                {
+
+                    //We draw the layer on the full resolution Image, so we don't need to worry about scaling
+                    //The application will automatically scale the image and the layer will scale along with it
+                    canvas.DrawBitmap(layer.Image, layer.Location);
+
+                    _renderedLayerCount++;
+                }
+
+                canvas.Save();
             }
-
-            _image = _baseImage.Copy();
-
-            //Draw the layer on image, starting with the original image
-            using var canvas = new SKCanvas(_image);
-
-            foreach (var layer in Layers)
-            {
-                //If the layer has a display duration, we check if it has expired, if so just skip. Another process will clean up expired layers
-                if (layer.DisplayDuration > 0 && DateTime.Now.Subtract(layer.DisplayStart).TotalMilliseconds > layer.DisplayDuration)
-                    continue;
-
-                //We draw the layer on the full resolution Image, so we don't need to worry about scaling
-                //The application will automatically scale the image and the layer will scale along with it
-                canvas.DrawBitmap(layer.Image, layer.Location);
-
-                _renderedLayerCount++;
-            }
-
-            canvas.Save();
         }
 
         /// <summary>
