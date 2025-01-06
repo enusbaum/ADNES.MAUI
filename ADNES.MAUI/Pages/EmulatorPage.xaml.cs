@@ -16,7 +16,7 @@ namespace ADNES.MAUI.Pages
     {
 
         private readonly SimpleReactiveGlobalHook? _keyboardHook;
-        private Task _keyboardHookTask;
+        private readonly Task _keyboardHookTask;
 
         public EmulatorPage()
         {
@@ -61,7 +61,29 @@ namespace ADNES.MAUI.Pages
                     EmulatorCanvas.ScaleYTo(1, 1500, Easing.CubicOut);
                 });
             });
+        }
 
+        protected override void OnDisappearing()
+        {
+            base.OnDisappearing();
+
+            //Stop the Keyboard Hook listener
+            _keyboardHook?.Dispose();
+
+            //Wait for the keyboard hook task to finish -- sloppy, but it works
+            var waitedMilliseconds = 0;
+            while (!_keyboardHookTask.IsCompleted)
+            {
+                //Wait 1ms and increment out ms counter
+                Thread.Sleep(1);
+                waitedMilliseconds++;
+
+                //If we've waited for more than 500ms, break and attempt to dispose (it'll throw an exception if it's still running)
+                if (waitedMilliseconds >= 500)
+                    break;
+            }
+
+            _keyboardHookTask?.Dispose();
 
         }
 
@@ -186,8 +208,7 @@ namespace ADNES.MAUI.Pages
 
         public void Dispose()
         {
-            _keyboardHookTask?.Dispose();
-            _keyboardHook.Dispose();
+            
         }
     }
 }

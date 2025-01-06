@@ -548,7 +548,7 @@ namespace ADNES.MAUI.ViewModels
             _renderTask.Dispose();
 
             //Clean up the Bitmap
-            EmulatorScreenBitmap.Dispose();
+            EmulatorScreenBitmap?.Dispose();
 
             GC.SuppressFinalize(this);
         }
