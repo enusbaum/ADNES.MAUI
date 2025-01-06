@@ -79,6 +79,11 @@ namespace ADNES.MAUI.ViewModels
         private Guid PauseGraphicId;
 
         /// <summary>
+        ///     Dictionary we use to track the last time a control input animation was displayed as not to flood the view with animations
+        /// </summary>
+        private readonly ConcurrentDictionary<ControllerAreas, DateTime> _controllerAreaTouchAnimationTimes = new();
+
+        /// <summary>
         ///     Default Constructor
         /// </summary>
         public EmulatorPageViewModel()
@@ -235,7 +240,7 @@ namespace ADNES.MAUI.ViewModels
 
                 //We'll see if any touch has released in any ControllerAreas and send the appropriate button release
                 case SKTouchAction.Released:
-                {
+                    {
                         var inArea = (ControllerAreas)ControllerImage.InArea(e.Location);
 
                         switch (inArea)
@@ -268,7 +273,7 @@ namespace ADNES.MAUI.ViewModels
                                 break;
                         }
                         break;
-                }
+                    }
                 default:
                     break;
             }
@@ -277,9 +282,26 @@ namespace ADNES.MAUI.ViewModels
         /// <summary>
         ///     Renders a Touch Animation on the specified touch area for 750ms
         /// </summary>
-        /// <param name="touchArea"></param>
-        private void RenderTouchAnimation(SKRect touchArea)
+        /// <param name="controllerArea"></param>
+        private void RenderTouchAnimation(ControllerAreas controllerArea)
         {
+            //Check to see if we've already displayed a touch animation in the last 750ms, if not, log this one -- otherwise bail
+            if (_controllerAreaTouchAnimationTimes.TryGetValue(controllerArea, out var lastTouchTime))
+            {
+                if (DateTime.Now.Subtract(lastTouchTime).TotalMilliseconds < 250)
+                    return;
+
+                //Update the touch time in the dictionary since we're going to display a new one
+                _controllerAreaTouchAnimationTimes.TryUpdate(controllerArea, DateTime.Now, lastTouchTime);
+            }
+            else
+            {
+                //Add the touch time to the dictionary (first touch)
+                _controllerAreaTouchAnimationTimes.TryAdd(controllerArea, DateTime.Now);
+            }
+
+            var touchArea = controllerArea.GetAttribute<AreaAttribute>()!.Rect;
+
             //Find the center coordinates of the touch area
             var centerX = touchArea.Left + (touchArea.Width / 2);
             var centerY = touchArea.Top + (touchArea.Height / 2);
@@ -288,14 +310,14 @@ namespace ADNES.MAUI.ViewModels
 
             //Call the BitmapRenderer to render a touch animation
             var touchAnimation =
-                _bitmapRenderer.RenderExpandingCircles(20, touchAnimationSize, SKColors.Yellow, SKColors.Transparent);
+                _bitmapRenderer.RenderExpandingCircles(20, touchAnimationSize, SKColors.White, SKColors.Transparent);
 
             //Add the touch animation layers to the Controller Image, calculating how long each image should be delayed/displayed based on the number of images and the total time (750ms)
             var animationLayers = new List<Guid>();
             var displayTimePerFrame = 500 / touchAnimation.Count;
             for (var i = 0; i < touchAnimation.Count; i++)
             {
-                animationLayers.Add(ControllerImage.AddLayer(touchAnimation[i], new SKPoint(centerX - (touchAnimationSize.Width/2), centerY - (touchAnimationSize.Height/2)), displayTimePerFrame, displayTimePerFrame * i));
+                animationLayers.Add(ControllerImage.AddLayer(touchAnimation[i], new SKPoint(centerX - (touchAnimationSize.Width / 2), centerY - (touchAnimationSize.Height / 2)), displayTimePerFrame, displayTimePerFrame * i));
             }
 
             //Kick off a task to notify the view to redraw the Controller Image 30 times a second and after 750ms remove the touch animation layers
@@ -313,10 +335,49 @@ namespace ADNES.MAUI.ViewModels
         }
 
         /// <summary>
+        ///     Renders a layer over specified touch areas on the Controller to show what keyboard keys are mapped to what buttons
+        ///
+        ///     The help layers will be removed after 3 seconds
+        /// </summary>
+        private void ShowKeyboardHelp()
+        {
+            var helpLayers = new List<Guid>
+            {
+                //Render the Help Layers for the Keyboard Mappings
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.DPadUp.GetAttribute<AreaAttribute>()!.Rect.Size, "W", SKColors.Black, SKColors.White), ControllerAreas.DPadUp.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.DPadDown.GetAttribute<AreaAttribute>()!.Rect.Size, "S", SKColors.Black, SKColors.White), ControllerAreas.DPadDown.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.DPadLeft.GetAttribute<AreaAttribute>()!.Rect.Size, "A", SKColors.Black, SKColors.White), ControllerAreas.DPadLeft.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.DPadRight.GetAttribute<AreaAttribute>()!.Rect.Size, "D", SKColors.Black, SKColors.White), ControllerAreas.DPadRight.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.AButton.GetAttribute<AreaAttribute>()!.Rect.Size, "K", SKColors.Black, SKColors.White), ControllerAreas.AButton.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.BButton.GetAttribute<AreaAttribute>()!.Rect.Size, "L", SKColors.Black, SKColors.White), ControllerAreas.BButton.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.StartButton.GetAttribute<AreaAttribute>()!.Rect.Size, "Ent", SKColors.Black, SKColors.White), ControllerAreas.StartButton.GetAttribute<AreaAttribute>()!.Rect.Location, 3000),
+                ControllerImage.AddLayer(_bitmapRenderer.RenderText(ControllerAreas.SelectButton.GetAttribute<AreaAttribute>()!.Rect.Size, "RS", SKColors.Black, SKColors.White), ControllerAreas.SelectButton.GetAttribute<AreaAttribute>()!.Rect.Location, 3000)
+            };
+
+            //Notify the view to redraw the Controller Image
+            NotifyView(RedrawEvents.RedrawController);
+
+            //Start a task to clean up the layers and notify the View to re-render the Controller Image without the help layers
+            Task.Factory.StartNew(async () =>
+            {
+                await Task.Delay(3000);
+                ControllerImage.RemoveLayers(helpLayers);
+                NotifyView(RedrawEvents.RedrawController);
+            });
+        }
+
+        /// <summary>
         ///     Handles input from the keyboard for Windows/Mac versions of the MAUI app
         /// </summary>
         public void Keyboard_OnKeyPress(KeyboardHookEventArgs keyboardHookEventArgs)
         {
+            //Handle F1 Key Press to show Keyboard Help regardless of emulator state
+            if (keyboardHookEventArgs.Data.KeyCode == KeyCode.VcF1)
+            {
+                ShowKeyboardHelp();
+                return;
+            }
+
             //Ignore Key Presses if Emulator isn't running
             if (!_emulator.IsRunning || _emulator.State == EmulatorState.Paused)
                 return;
@@ -326,38 +387,38 @@ namespace ADNES.MAUI.ViewModels
                 case KeyCode.VcW:
                 case KeyCode.VcUp:
                     _emulator.Controller1.ButtonPress(Buttons.Up);
-                    RenderTouchAnimation(ControllerAreas.DPadUp.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.DPadUp);
                     break;
                 case KeyCode.VcS:
                 case KeyCode.VcDown:
                     _emulator.Controller1.ButtonPress(Buttons.Down);
-                    RenderTouchAnimation(ControllerAreas.DPadDown.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.DPadDown);
                     break;
                 case KeyCode.VcA:
                 case KeyCode.VcLeft:
                     _emulator.Controller1.ButtonPress(Buttons.Left);
-                    RenderTouchAnimation(ControllerAreas.DPadLeft.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.DPadLeft);
                     break;
                 case KeyCode.VcD:
                 case KeyCode.VcRight:
                     _emulator.Controller1.ButtonPress(Buttons.Right);
-                    RenderTouchAnimation(ControllerAreas.DPadRight.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.DPadRight);
                     break;
                 case KeyCode.VcComma:
                     _emulator.Controller1.ButtonPress(Buttons.A);
-                    RenderTouchAnimation(ControllerAreas.AButton.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.AButton);
                     break;
                 case KeyCode.VcPeriod:
                     _emulator.Controller1.ButtonPress(Buttons.B);
-                    RenderTouchAnimation(ControllerAreas.BButton.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.BButton);
                     break;
                 case KeyCode.VcRightShift:
                     _emulator.Controller1.ButtonPress(Buttons.Select);
-                    RenderTouchAnimation(ControllerAreas.SelectButton.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.SelectButton);
                     break;
                 case KeyCode.VcEnter:
                     _emulator.Controller1.ButtonPress(Buttons.Start);
-                    RenderTouchAnimation(ControllerAreas.StartButton.GetAttribute<AreaAttribute>()!.Rect);
+                    RenderTouchAnimation(ControllerAreas.StartButton);
                     break;
                 default:
                     break;
