@@ -16,7 +16,7 @@ namespace ADNES.MAUI.Pages
     {
 
         private readonly SimpleReactiveGlobalHook? _keyboardHook;
-        private readonly Task _keyboardHookTask;
+        private readonly Task? _keyboardHookTask;
 
         public EmulatorPage()
         {
